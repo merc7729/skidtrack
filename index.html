@@ -570,10 +570,10 @@
   */
 
   const SUPABASE_URL =
-    "YOUR_SUPABASE_PROJECT_URL";
+    https://secrzzjegeuppgziyojk.supabase.com;
 
   const SUPABASE_PUBLISHABLE_KEY =
-    "YOUR_SUPABASE_PUBLISHABLE_KEY";
+    sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ;
 
 
   const supabase =
@@ -712,7 +712,18 @@
 
 
     currentProfile = data;
+if (
+  data.role === "technician"
+) 
 
+{
+
+  document
+    .getElementById("skidForm")
+    .closest(".card")
+    .style.display = "none";
+
+}
 
     document
       .getElementById(
