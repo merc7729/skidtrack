@@ -1,89 +1,177 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>SkidTrack</title>
+  <title>SkidTrack | Water Filtration Service Management</title>
 
   <!-- QR Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- QR Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    :root {
+      --navy: #123047;
+      --blue: #1565c0;
+      --light-blue: #e8f2fb;
+      --green: #15803d;
+      --orange: #b45309;
+      --red: #b91c1c;
+      --gray: #6b7280;
+      --bg: #f4f7fa;
+      --white: #ffffff;
+      --border: #d7dde5;
+      --text: #1f2937;
+    }
+
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f7fa;
-      color: #1f2937;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
     }
 
     header {
-      background: #123047;
+      background: var(--navy);
       color: white;
-      padding: 15px 25px;
+      padding: 14px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
     }
 
     header h1 {
       margin: 0;
+      font-size: 24px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .container {
-      padding: 25px;
       max-width: 1400px;
       margin: auto;
+      padding: 24px;
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .login-box {
-      max-width: 420px;
-      margin: 80px auto;
+      max-width: 430px;
+      margin: 70px auto;
       background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 5px 20px rgba(0,0,0,.1);
+      padding: 32px;
+      border-radius: 14px;
+      box-shadow: 0 10px 35px rgba(0,0,0,.12);
     }
 
-    input, textarea, select {
+    .login-logo {
+      text-align: center;
+      font-size: 50px;
+      margin-bottom: 10px;
+    }
+
+    .login-box h1 {
+      text-align: center;
+      margin-bottom: 5px;
+      color: var(--navy);
+    }
+
+    .login-box p {
+      text-align: center;
+      color: var(--gray);
+      margin-top: 0;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    input,
+    textarea,
+    select {
       width: 100%;
       padding: 12px;
-      margin-top: 5px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
     }
 
     button {
       padding: 10px 16px;
       border: none;
-      border-radius: 6px;
+      border-radius: 7px;
       cursor: pointer;
-      background: #1565c0;
+      background: var(--blue);
       color: white;
       font-weight: bold;
+      transition: .2s;
+    }
+
+    button:hover {
+      opacity: .9;
     }
 
     button.secondary {
-      background: #6b7280;
+      background: var(--gray);
+    }
+
+    button.success {
+      background: var(--green);
+    }
+
+    button.warning {
+      background: var(--orange);
     }
 
     button.danger {
-      background: #c62828;
+      background: var(--red);
     }
 
     nav {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin: 20px 0;
+      margin-bottom: 24px;
+    }
+
+    nav button.active {
+      background: var(--navy);
     }
 
     .page {
@@ -96,21 +184,33 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
     }
 
     .card {
       background: white;
       padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    }
+
+    .card h3 {
+      margin-top: 0;
     }
 
     .stat {
-      font-size: 32px;
+      font-size: 36px;
       font-weight: bold;
-      color: #1565c0;
+      color: var(--blue);
+    }
+
+    .stat-label {
+      color: var(--gray);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
     }
 
     table {
@@ -119,42 +219,219 @@
       background: white;
     }
 
-    th, td {
+    th,
+    td {
       padding: 12px;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid #e5e7eb;
       text-align: left;
+      vertical-align: top;
     }
 
     th {
       background: #eef3f7;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .status {
-      color: #666;
-      margin-bottom: 10px;
-    }
-
-    #reader {
-      max-width: 500px;
+      white-space: nowrap;
     }
 
     .role {
-      background: #e3f2fd;
+      background: #dbeafe;
+      color: #1e40af;
       padding: 5px 10px;
       border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: capitalize;
+    }
+
+    .status {
+      margin: 10px 0;
+      min-height: 22px;
+      color: var(--gray);
+    }
+
+    .status.success {
+      color: var(--green);
+    }
+
+    .status.error {
+      color: var(--red);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .badge.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge.maintenance {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge.out_of_service {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .search-row input,
+    .search-row select {
+      flex: 1;
+      min-width: 200px;
+      margin: 0;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .action-buttons button {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .scanner-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .qr-preview {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .qr-preview canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .skid-detail {
+      margin-bottom: 18px;
+    }
+
+    .skid-detail h2 {
+      margin-bottom: 5px;
+    }
+
+    .skid-detail-meta {
+      color: var(--gray);
+      margin-bottom: 15px;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--gray);
+      padding: 25px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--gray);
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: white;
+      width: 100%;
+      max-width: 550px;
+      border-radius: 12px;
+      padding: 22px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h2 {
+      margin-top: 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 700px) {
+      header {
+        padding: 14px;
+      }
+
+      .container {
+        padding: 14px;
+      }
+
+      header h1 {
+        font-size: 20px;
+      }
+
+      th,
+      td {
+        padding: 9px;
+        font-size: 13px;
+      }
     }
 
     @media print {
-      header, nav, button, .no-print {
+      header,
+      nav,
+      button,
+      .no-print {
         display: none !important;
       }
 
       body {
         background: white;
+      }
+
+      .container {
+        padding: 0;
+      }
+
+      .card {
+        box-shadow: none;
       }
     }
   </style>
@@ -162,11 +439,13 @@
 
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 
 <div id="loginScreen">
 
   <div class="login-box">
+
+    <div class="login-logo">💧</div>
 
     <h1>SkidTrack</h1>
 
@@ -179,6 +458,7 @@
       <input
         type="email"
         id="loginEmail"
+        autocomplete="email"
         required
       >
 
@@ -187,8 +467,11 @@
       <input
         type="password"
         id="loginPassword"
+        autocomplete="current-password"
         required
       >
+
+      <br><br>
 
       <button type="submit">
         Sign In
@@ -196,7 +479,7 @@
 
     </form>
 
-    <p id="loginMessage"></p>
+    <div id="loginMessage" class="status"></div>
 
   </div>
 
@@ -211,7 +494,7 @@
 
     <h1>💧 SkidTrack</h1>
 
-    <div>
+    <div class="header-right">
 
       <span id="employeeName"></span>
 
@@ -236,19 +519,31 @@
 
     <nav>
 
-      <button onclick="showPage('dashboard')">
+      <button
+        id="nav-dashboard"
+        onclick="showPage('dashboard')"
+      >
         Dashboard
       </button>
 
-      <button onclick="showPage('work')">
+      <button
+        id="nav-work"
+        onclick="showPage('work')"
+      >
         Log Work
       </button>
 
-      <button onclick="showPage('skids')">
+      <button
+        id="nav-skids"
+        onclick="showPage('skids')"
+      >
         Skids
       </button>
 
-      <button onclick="showPage('history')">
+      <button
+        id="nav-history"
+        onclick="showPage('history')"
+      >
         Work History
       </button>
 
@@ -262,7 +557,24 @@
       class="page active"
     >
 
-      <h2>Dashboard</h2>
+      <div class="top-actions">
+
+        <div>
+          <h2>Dashboard</h2>
+          <div class="stat-label">
+            Water Filtration Service Overview
+          </div>
+        </div>
+
+        <button
+          class="success"
+          onclick="showPage('work')"
+        >
+          + Log Work
+        </button>
+
+      </div>
+
 
       <div class="grid">
 
@@ -302,8 +614,55 @@
             id="totalHours"
             class="stat"
           >
+            0.00
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <h3>Active Skids</h3>
+
+          <div
+            id="activeSkids"
+            class="stat"
+          >
             0
           </div>
+
+        </div>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="card">
+
+        <h3>Recent Service Activity</h3>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Date</th>
+                <th>Skid</th>
+                <th>Work</th>
+                <th>Technician</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="recentActivityTable"></tbody>
+
+          </table>
 
         </div>
 
@@ -321,35 +680,44 @@
 
       <h2>Log Work</h2>
 
+
       <div class="grid">
+
+        <!-- QR SCANNER -->
 
         <div class="card">
 
-          <h3>Scan Skid QR Code</h3>
+          <h3>📷 Scan Skid QR Code</h3>
+
+          <p class="stat-label">
+            Scan a QR label to automatically select the skid.
+          </p>
 
           <div id="reader"></div>
 
-          <br>
+          <div class="scanner-buttons">
 
-          <button
-            onclick="startScanner()"
-          >
-            Start Scanner
-          </button>
+            <button onclick="startScanner()">
+              Start Scanner
+            </button>
 
-          <button
-            class="secondary"
-            onclick="stopScanner()"
-          >
-            Stop Scanner
-          </button>
+            <button
+              class="secondary"
+              onclick="stopScanner()"
+            >
+              Stop Scanner
+            </button>
+
+          </div>
 
         </div>
 
 
+        <!-- WORK FORM -->
+
         <div class="card">
 
-          <h3>Service Record</h3>
+          <h3>🔧 Service Record</h3>
 
           <form id="workForm">
 
@@ -358,28 +726,32 @@
             <select
               id="workSkid"
               required
-            ></select>
+            >
+
+              <option value="">
+                Select Skid
+              </option>
+
+            </select>
 
 
-            <label>
-              Work Performed
-            </label>
+            <label>Work Performed</label>
 
             <textarea
               id="workPerformed"
+              placeholder="Describe the service or maintenance performed..."
               required
             ></textarea>
 
 
-            <label>
-              Time Spent (Hours)
-            </label>
+            <label>Time Spent (Hours)</label>
 
             <input
               type="number"
               step="0.25"
-              min="0"
+              min="0.25"
               id="timeSpent"
+              placeholder="Example: 1.5"
               required
             >
 
@@ -388,16 +760,28 @@
 
             <textarea
               id="workNotes"
+              placeholder="Optional notes..."
             ></textarea>
 
 
-            <button type="submit">
+            <div class="status">
+              Date and time are automatically recorded.
+            </div>
 
+
+            <button
+              type="submit"
+              class="success"
+            >
               Save Work Record
-
             </button>
 
           </form>
+
+          <div
+            id="workMessage"
+            class="status"
+          ></div>
 
         </div>
 
@@ -413,40 +797,136 @@
       class="page"
     >
 
-      <h2>Filtration Skids</h2>
+      <div class="top-actions">
+
+        <div>
+
+          <h2>Filtration Skids</h2>
+
+          <div class="stat-label">
+            Manage water filtration systems and QR labels.
+          </div>
+
+        </div>
+
+      </div>
 
 
-      <div class="card no-print">
+      <!-- ADD SKID -->
 
-        <h3>Add Skid</h3>
+      <div
+        id="addSkidCard"
+        class="card no-print"
+      >
+
+        <h3>+ Add New Skid</h3>
 
         <form id="skidForm">
 
-          <label>Skid Number</label>
+          <div class="grid">
+
+            <div>
+
+              <label>Skid Number</label>
+
+              <input
+                id="skidNumber"
+                placeholder="Example: SKID-001"
+                required
+              >
+
+            </div>
+
+
+            <div>
+
+              <label>Location</label>
+
+              <input
+                id="skidLocation"
+                placeholder="Example: Building A"
+              >
+
+            </div>
+
+
+            <div>
+
+              <label>System Type</label>
+
+              <input
+                id="systemType"
+                placeholder="Example: Reverse Osmosis"
+              >
+
+            </div>
+
+
+            <div>
+
+              <label>Status</label>
+
+              <select id="skidStatus">
+
+                <option value="active">
+                  Active
+                </option>
+
+                <option value="maintenance">
+                  Maintenance
+                </option>
+
+                <option value="out_of_service">
+                  Out of Service
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          <br>
+
+          <button
+            type="submit"
+            class="success"
+          >
+            Add Skid
+          </button>
+
+        </form>
+
+        <div
+          id="skidMessage"
+          class="status"
+        ></div>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="card">
+
+        <div class="search-row">
 
           <input
-            id="skidNumber"
-            required
+            id="skidSearch"
+            placeholder="Search skid number, location, or system..."
+            oninput="filterSkids()"
           >
 
-
-          <label>Location</label>
-
-          <input
-            id="skidLocation"
+          <select
+            id="skidStatusFilter"
+            onchange="filterSkids()"
           >
 
-
-          <label>System Type</label>
-
-          <input
-            id="systemType"
-          >
-
-
-          <label>Status</label>
-
-          <select id="skidStatus">
+            <option value="">
+              All Statuses
+            </option>
 
             <option value="active">
               Active
@@ -462,49 +942,32 @@
 
           </select>
 
-
-          <button type="submit">
-
-            Add Skid
-
-          </button>
-
-        </form>
-
-      </div>
+        </div>
 
 
-      <br>
+        <div class="table-wrap">
 
+          <table>
 
-      <div class="card">
+            <thead>
 
-        <table>
+              <tr>
 
-          <thead>
+                <th>Skid Number</th>
+                <th>Location</th>
+                <th>System</th>
+                <th>Status</th>
+                <th>Actions</th>
 
-            <tr>
+              </tr>
 
-              <th>Skid Number</th>
+            </thead>
 
-              <th>Location</th>
+            <tbody id="skidTable"></tbody>
 
-              <th>System</th>
+          </table>
 
-              <th>Status</th>
-
-              <th>QR Label</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody id="skidTable">
-
-          </tbody>
-
-        </table>
+        </div>
 
       </div>
 
@@ -518,39 +981,95 @@
       class="page"
     >
 
-      <h2>Work History</h2>
+      <div class="top-actions">
+
+        <div>
+
+          <h2>Work History</h2>
+
+          <div class="stat-label">
+            Complete service and maintenance history.
+          </div>
+
+        </div>
+
+        <button
+          class="secondary"
+          onclick="loadWorkHistory()"
+        >
+          Refresh
+        </button>
+
+      </div>
+
 
       <div class="card">
 
-        <table>
+        <div class="search-row">
 
-          <thead>
+          <input
+            id="historySearch"
+            placeholder="Search skid, technician, work, or notes..."
+            oninput="filterHistory()"
+          >
 
-            <tr>
-
-              <th>Date</th>
-
-              <th>Skid</th>
-
-              <th>Work Performed</th>
-
-              <th>Hours</th>
-
-              <th>Technician</th>
-
-              <th>Notes</th>
-
-            </tr>
-
-          </thead>
+        </div>
 
 
-          <tbody id="historyTable">
+        <div class="table-wrap">
 
-          </tbody>
+          <table>
 
-        </table>
+            <thead>
 
+              <tr>
+
+                <th>Date</th>
+                <th>Skid</th>
+                <th>Work Performed</th>
+                <th>Hours</th>
+                <th>Technician</th>
+                <th>Notes</th>
+                <th>Actions</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="historyTable"></tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- SKID DETAIL -->
+
+    <div
+      id="skidDetail"
+      class="page"
+    >
+
+      <button
+        class="secondary no-print"
+        onclick="showPage('skids')"
+      >
+        ← Back to Skids
+      </button>
+
+
+      <br><br>
+
+
+      <div
+        id="skidDetailContent"
+        class="loading"
+      >
+        Loading skid...
       </div>
 
     </div>
@@ -560,36 +1079,188 @@
 </div>
 
 
+<!-- EDIT SKID MODAL -->
+
+<div
+  id="editSkidModal"
+  class="modal-backdrop hidden"
+>
+
+  <div class="modal">
+
+    <h2>Edit Skid</h2>
+
+    <form id="editSkidForm">
+
+      <input
+        type="hidden"
+        id="editSkidId"
+      >
+
+
+      <label>Skid Number</label>
+
+      <input
+        id="editSkidNumber"
+        required
+      >
+
+
+      <label>Location</label>
+
+      <input id="editSkidLocation">
+
+
+      <label>System Type</label>
+
+      <input id="editSystemType">
+
+
+      <label>Status</label>
+
+      <select id="editSkidStatus">
+
+        <option value="active">
+          Active
+        </option>
+
+        <option value="maintenance">
+          Maintenance
+        </option>
+
+        <option value="out_of_service">
+          Out of Service
+        </option>
+
+      </select>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="closeEditSkidModal()"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="success"
+        >
+          Save Changes
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- EDIT WORK MODAL -->
+
+<div
+  id="editWorkModal"
+  class="modal-backdrop hidden"
+>
+
+  <div class="modal">
+
+    <h2>Edit Work Record</h2>
+
+    <form id="editWorkForm">
+
+      <input
+        type="hidden"
+        id="editWorkId"
+      >
+
+
+      <label>Work Performed</label>
+
+      <textarea
+        id="editWorkPerformed"
+        required
+      ></textarea>
+
+
+      <label>Time Spent (Hours)</label>
+
+      <input
+        type="number"
+        step="0.25"
+        min="0"
+        id="editTimeSpent"
+        required
+      >
+
+
+      <label>Notes</label>
+
+      <textarea id="editWorkNotes"></textarea>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="closeEditWorkModal()"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="success"
+        >
+          Save Changes
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
 
 <script>
 
   /*
-   ==========================================
-   SUPABASE CONFIGURATION
-   ==========================================
+  ==================================================
+  SUPABASE CONFIGURATION
+  ==================================================
+
+  Paste your exact Supabase project values below.
+
+  IMPORTANT:
+  These values MUST be inside quotation marks.
   */
 
   const SUPABASE_URL =
-  "https://secrzzjegeuppgziyojk.supabase.com";
+    "https://YOUR-PROJECT.supabase.co";
 
-const SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
+  const SUPABASE_PUBLISHABLE_KEY =
+    "YOUR-SUPABASE-PUBLISHABLE-KEY";
 
 
   const supabase =
     window.supabase.createClient(
-
       SUPABASE_URL,
-
       SUPABASE_PUBLISHABLE_KEY
-
     );
 
 
   /*
-   ==========================================
-   GLOBAL VARIABLES
-   ==========================================
+  ==================================================
+  GLOBAL VARIABLES
+  ==================================================
   */
 
   let currentUser = null;
@@ -598,11 +1269,15 @@ const SUPABASE_PUBLISHABLE_KEY =
 
   let html5QrCode = null;
 
+  let allSkids = [];
+
+  let allWorkRecords = [];
+
 
   /*
-   ==========================================
-   LOGIN
-   ==========================================
+  ==================================================
+  LOGIN
+  ==================================================
   */
 
   document
@@ -617,46 +1292,42 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     event.preventDefault();
 
-
     const email =
-      document.getElementById(
-        "loginEmail"
-      ).value;
-
+      document
+        .getElementById("loginEmail")
+        .value
+        .trim();
 
     const password =
-      document.getElementById(
-        "loginPassword"
-      ).value;
-
+      document
+        .getElementById("loginPassword")
+        .value;
 
     const message =
-      document.getElementById(
-        "loginMessage"
-      );
+      document
+        .getElementById("loginMessage");
 
+
+    message.className = "status";
 
     message.textContent =
       "Signing in...";
 
 
     const {
-
       data,
-
       error
-
     } =
       await supabase.auth.signInWithPassword({
-
-        email: email,
-
-        password: password
-
+        email,
+        password
       });
 
 
     if (error) {
+
+      message.className =
+        "status error";
 
       message.textContent =
         error.message;
@@ -672,25 +1343,22 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     await loadUserProfile();
 
-    openApplication();
+    await openApplication();
 
   }
 
 
   /*
-   ==========================================
-   LOAD USER PROFILE
-   ==========================================
+  ==================================================
+  LOAD USER PROFILE
+  ==================================================
   */
 
   async function loadUserProfile() {
 
     const {
-
       data,
-
       error
-
     } =
       await supabase
         .from("profiles")
@@ -704,60 +1372,66 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     if (error) {
 
-      console.error(error);
+      console.error(
+        "Profile error:",
+        error
+      );
 
-      return;
+      currentProfile = {
+        full_name:
+          currentUser.email,
+        role:
+          "technician"
+      };
+
+    } else {
+
+      currentProfile = data;
 
     }
 
 
-    currentProfile = data;
-    if (
-      data.role === "technician"
-    ){
-
-  document
-    .getElementById("skidForm")
-    .closest(".card")
-    .style.display = "none";
-
-}
-
     document
-      .getElementById(
-        "employeeName"
-      )
+      .getElementById("employeeName")
       .textContent =
-        data.full_name || "Employee";
+        currentProfile.full_name ||
+        currentUser.email;
 
 
     document
-      .getElementById(
-        "employeeRole"
-      )
+      .getElementById("employeeRole")
       .textContent =
-        data.role;
+        currentProfile.role ||
+        "technician";
+
+
+    const isAdmin =
+      currentProfile.role === "admin";
+
+
+    document
+      .getElementById("addSkidCard")
+      .classList.toggle(
+        "hidden",
+        !isAdmin
+      );
 
   }
 
 
   /*
-   ==========================================
-   CHECK EXISTING LOGIN
-   ==========================================
+  ==================================================
+  SESSION
+  ==================================================
   */
 
   async function checkSession() {
 
     const {
-
       data:
-
       {
         session
-
       }
-
     } =
       await supabase.auth.getSession();
 
@@ -775,52 +1449,57 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     await loadUserProfile();
 
-
-    openApplication();
+    await openApplication();
 
   }
 
 
   /*
-   ==========================================
-   OPEN APPLICATION
-   ==========================================
+  ==================================================
+  OPEN APPLICATION
+  ==================================================
   */
 
   async function openApplication() {
 
     document
-      .getElementById(
-        "loginScreen"
-      )
-      .classList
-      .add("hidden");
+      .getElementById("loginScreen")
+      .classList.add("hidden");
 
 
     document
-      .getElementById(
-        "appScreen"
-      )
-      .classList
-      .remove("hidden");
+      .getElementById("appScreen")
+      .classList.remove("hidden");
 
 
-    await loadDashboard();
+    await refreshAllData();
+
+
+    handleSkidUrl();
+
+  }
+
+
+  async function refreshAllData() {
 
     await loadSkids();
 
     await loadWorkHistory();
 
+    await loadDashboard();
+
   }
 
 
   /*
-   ==========================================
-   LOGOUT
-   ==========================================
+  ==================================================
+  LOGOUT
+  ==================================================
   */
 
   async function logout() {
+
+    await stopScanner();
 
     await supabase.auth.signOut();
 
@@ -831,27 +1510,26 @@ const SUPABASE_PUBLISHABLE_KEY =
 
 
     document
-      .getElementById(
-        "appScreen"
-      )
-      .classList
-      .add("hidden");
+      .getElementById("appScreen")
+      .classList.add("hidden");
 
 
     document
-      .getElementById(
-        "loginScreen"
-      )
-      .classList
-      .remove("hidden");
+      .getElementById("loginScreen")
+      .classList.remove("hidden");
+
+
+    document
+      .getElementById("loginForm")
+      .reset();
 
   }
 
 
   /*
-   ==========================================
-   NAVIGATION
-   ==========================================
+  ==================================================
+  NAVIGATION
+  ==================================================
   */
 
   function showPage(pageId) {
@@ -859,13 +1537,8 @@ const SUPABASE_PUBLISHABLE_KEY =
     document
       .querySelectorAll(".page")
       .forEach(
-
         page =>
-
-          page.classList.remove(
-            "active"
-          )
-
+          page.classList.remove("active")
       );
 
 
@@ -873,109 +1546,187 @@ const SUPABASE_PUBLISHABLE_KEY =
       .getElementById(pageId)
       .classList.add("active");
 
+
+    document
+      .querySelectorAll("nav button")
+      .forEach(
+        button =>
+          button.classList.remove("active")
+      );
+
+
+    const navButton =
+      document.getElementById(
+        "nav-" + pageId
+      );
+
+
+    if (navButton) {
+
+      navButton.classList.add("active");
+
+    }
+
+
+    if (
+      pageId !== "work" &&
+      html5QrCode
+    ) {
+
+      stopScanner();
+
+    }
+
   }
 
 
   /*
-   ==========================================
-   DASHBOARD
-   ==========================================
+  ==================================================
+  DASHBOARD
+  ==================================================
   */
 
   async function loadDashboard() {
 
-    const {
-
-      count: skidCount
-
-    } =
-      await supabase
-        .from("skids")
-        .select(
-          "*",
-          {
-            count: "exact",
-            head: true
-          }
-        );
+    const totalSkids =
+      allSkids.length;
 
 
-    const {
-
-      data: work
-
-    } =
-      await supabase
-        .from("work_records")
-        .select("time_spent");
+    const activeSkids =
+      allSkids.filter(
+        skid =>
+          skid.status === "active"
+      ).length;
 
 
-    const hours =
-      work
-        ? work.reduce(
+    const totalWork =
+      allWorkRecords.length;
 
-            (
 
-              total,
+    const totalHours =
+      allWorkRecords.reduce(
+        (
+          total,
+          record
+        ) =>
+          total +
+          Number(
+            record.time_spent || 0
+          ),
 
-              record
-
-            ) =>
-
-              total +
-              Number(
-                record.time_spent
-              ),
-
-            0
-
-          )
-
-        : 0;
+        0
+      );
 
 
     document
-      .getElementById(
-        "totalSkids"
-      )
+      .getElementById("totalSkids")
       .textContent =
-        skidCount || 0;
+        totalSkids;
 
 
     document
-      .getElementById(
-        "totalWork"
-      )
+      .getElementById("activeSkids")
       .textContent =
-        work
-          ? work.length
-          : 0;
+        activeSkids;
 
 
     document
-      .getElementById(
-        "totalHours"
-      )
+      .getElementById("totalWork")
       .textContent =
-        hours.toFixed(2);
+        totalWork;
+
+
+    document
+      .getElementById("totalHours")
+      .textContent =
+        totalHours.toFixed(2);
+
+
+    const table =
+      document.getElementById(
+        "recentActivityTable"
+      );
+
+
+    table.innerHTML = "";
+
+
+    const recent =
+      allWorkRecords.slice(0, 5);
+
+
+    if (!recent.length) {
+
+      table.innerHTML = `
+        <tr>
+          <td
+            colspan="4"
+            class="empty"
+          >
+            No work records yet.
+          </td>
+        </tr>
+      `;
+
+      return;
+
+    }
+
+
+    recent.forEach(
+      record => {
+
+        table.innerHTML += `
+
+          <tr>
+
+            <td>
+              ${formatDate(
+                record.performed_at
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                record.skids
+                  ?.skid_number || ""
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                record.work_performed
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                record.profiles
+                  ?.full_name || ""
+              )}
+            </td>
+
+          </tr>
+
+        `;
+
+      }
+    );
 
   }
 
 
   /*
-   ==========================================
-   LOAD SKIDS
-   ==========================================
+  ==================================================
+  LOAD SKIDS
+  ==================================================
   */
 
   async function loadSkids() {
 
     const {
-
       data,
-
       error
-
     } =
       await supabase
         .from("skids")
@@ -987,18 +1738,28 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     if (error) {
 
-      console.error(error);
+      console.error(
+        "Skid error:",
+        error
+      );
 
       return;
 
     }
 
 
-    const table =
-      document.getElementById(
-        "skidTable"
-      );
+    allSkids =
+      data || [];
 
+
+    populateSkidSelect();
+
+    renderSkids(allSkids);
+
+  }
+
+
+  function populateSkidSelect() {
 
     const select =
       document.getElementById(
@@ -1006,72 +1767,178 @@ const SUPABASE_PUBLISHABLE_KEY =
       );
 
 
-    table.innerHTML = "";
+    const selectedValue =
+      select.value;
+
 
     select.innerHTML =
       '<option value="">Select Skid</option>';
 
 
-    data.forEach(
-
+    allSkids.forEach(
       skid => {
+
+        const option =
+          document.createElement(
+            "option"
+          );
+
+
+        option.value =
+          skid.id;
+
+
+        option.textContent =
+          skid.skid_number;
+
+
+        select.appendChild(option);
+
+      }
+    );
+
+
+    if (selectedValue) {
+
+      select.value =
+        selectedValue;
+
+    }
+
+  }
+
+
+  function renderSkids(skids) {
+
+    const table =
+      document.getElementById(
+        "skidTable"
+      );
+
+
+    table.innerHTML = "";
+
+
+    if (!skids.length) {
+
+      table.innerHTML = `
+        <tr>
+          <td
+            colspan="5"
+            class="empty"
+          >
+            No skids found.
+          </td>
+        </tr>
+      `;
+
+      return;
+
+    }
+
+
+    skids.forEach(
+      skid => {
+
+        const isAdmin =
+          currentProfile
+            ?.role === "admin";
+
 
         table.innerHTML += `
 
           <tr>
 
             <td>
-
-              ${escapeHtml(
-                skid.skid_number
-              )}
-
+              <strong>
+                ${escapeHtml(
+                  skid.skid_number
+                )}
+              </strong>
             </td>
 
 
             <td>
-
               ${escapeHtml(
                 skid.location || ""
               )}
-
             </td>
 
 
             <td>
-
               ${escapeHtml(
                 skid.system_type || ""
               )}
-
             </td>
 
 
             <td>
-
-              ${escapeHtml(
-                skid.status
-              )}
-
-            </td>
-
-
-            <td>
-
-              <button
-
-                onclick="printQrLabel(
-                  '${skid.id}',
-                  '${escapeAttribute(
-                    skid.skid_number
-                  )}'
-                )"
-
+              <span
+                class="
+                  badge
+                  ${escapeHtml(
+                    skid.status
+                  )}
+                "
               >
+                ${formatStatus(
+                  skid.status
+                )}
+              </span>
+            </td>
 
-                Print QR
 
-              </button>
+            <td>
+
+              <div class="action-buttons">
+
+                <button
+                  onclick="viewSkid(
+                    '${skid.id}'
+                  )"
+                >
+                  View
+                </button>
+
+
+                <button
+                  class="secondary"
+                  onclick="printQrLabel(
+                    '${skid.id}'
+                  )"
+                >
+                  QR Label
+                </button>
+
+
+                ${
+                  isAdmin
+                    ? `
+
+                      <button
+                        class="warning"
+                        onclick="openEditSkid(
+                          '${skid.id}'
+                        )"
+                      >
+                        Edit
+                      </button>
+
+
+                      <button
+                        class="danger"
+                        onclick="deleteSkid(
+                          '${skid.id}'
+                        )"
+                      >
+                        Delete
+                      </button>
+
+                    `
+                    : ""
+                }
+
+              </div>
 
             </td>
 
@@ -1079,93 +1946,316 @@ const SUPABASE_PUBLISHABLE_KEY =
 
         `;
 
-
-        select.innerHTML += `
-
-          <option value="${skid.id}">
-
-            ${escapeHtml(
-              skid.skid_number
-            )}
-
-          </option>
-
-        `;
-
       }
-
     );
 
   }
 
 
   /*
-   ==========================================
-   ADD SKID
-   ==========================================
+  ==================================================
+  FILTER SKIDS
+  ==================================================
+  */
+
+  function filterSkids() {
+
+    const search =
+      document
+        .getElementById("skidSearch")
+        .value
+        .toLowerCase();
+
+
+    const status =
+      document
+        .getElementById(
+          "skidStatusFilter"
+        )
+        .value;
+
+
+    const filtered =
+      allSkids.filter(
+        skid => {
+
+          const searchable =
+            [
+              skid.skid_number,
+              skid.location,
+              skid.system_type
+            ]
+              .join(" ")
+              .toLowerCase();
+
+
+          const searchMatch =
+            searchable.includes(search);
+
+
+          const statusMatch =
+            !status ||
+            skid.status === status;
+
+
+          return (
+            searchMatch &&
+            statusMatch
+          );
+
+        }
+      );
+
+
+    renderSkids(filtered);
+
+  }
+
+
+  /*
+  ==================================================
+  ADD SKID
+  ==================================================
   */
 
   document
-    .getElementById(
-      "skidForm"
-    )
+    .getElementById("skidForm")
     .addEventListener(
-
       "submit",
+      addSkid
+    );
 
+
+  async function addSkid(event) {
+
+    event.preventDefault();
+
+
+    const message =
+      document.getElementById(
+        "skidMessage"
+      );
+
+
+    message.className =
+      "status";
+
+
+    message.textContent =
+      "Saving...";
+
+
+    const skidNumber =
+      document
+        .getElementById("skidNumber")
+        .value
+        .trim();
+
+
+    const {
+      error
+    } =
+      await supabase
+        .from("skids")
+        .insert({
+
+          skid_number:
+            skidNumber,
+
+          location:
+            document
+              .getElementById(
+                "skidLocation"
+              )
+              .value
+              .trim(),
+
+          system_type:
+            document
+              .getElementById(
+                "systemType"
+              )
+              .value
+              .trim(),
+
+          status:
+            document
+              .getElementById(
+                "skidStatus"
+              )
+              .value
+
+        });
+
+
+    if (error) {
+
+      message.className =
+        "status error";
+
+      message.textContent =
+        error.message;
+
+      return;
+
+    }
+
+
+    message.className =
+      "status success";
+
+
+    message.textContent =
+      "Skid added successfully.";
+
+
+    event.target.reset();
+
+
+    await loadSkids();
+
+    await loadDashboard();
+
+  }
+
+
+  /*
+  ==================================================
+  EDIT SKID
+  ==================================================
+  */
+
+  function openEditSkid(skidId) {
+
+    const skid =
+      allSkids.find(
+        item =>
+          item.id === skidId
+      );
+
+
+    if (!skid) {
+
+      return;
+
+    }
+
+
+    document
+      .getElementById("editSkidId")
+      .value =
+        skid.id;
+
+
+    document
+      .getElementById(
+        "editSkidNumber"
+      )
+      .value =
+        skid.skid_number || "";
+
+
+    document
+      .getElementById(
+        "editSkidLocation"
+      )
+      .value =
+        skid.location || "";
+
+
+    document
+      .getElementById(
+        "editSystemType"
+      )
+      .value =
+        skid.system_type || "";
+
+
+    document
+      .getElementById(
+        "editSkidStatus"
+      )
+      .value =
+        skid.status || "active";
+
+
+    document
+      .getElementById(
+        "editSkidModal"
+      )
+      .classList.remove("hidden");
+
+  }
+
+
+  function closeEditSkidModal() {
+
+    document
+      .getElementById(
+        "editSkidModal"
+      )
+      .classList.add("hidden");
+
+  }
+
+
+  document
+    .getElementById("editSkidForm")
+    .addEventListener(
+      "submit",
       async event => {
 
         event.preventDefault();
 
 
+        const id =
+          document
+            .getElementById(
+              "editSkidId"
+            )
+            .value;
+
+
         const {
-
           error
-
         } =
           await supabase
             .from("skids")
-            .insert({
+            .update({
 
               skid_number:
-
                 document
                   .getElementById(
-                    "skidNumber"
+                    "editSkidNumber"
                   )
                   .value
                   .trim(),
-
 
               location:
-
                 document
                   .getElementById(
-                    "skidLocation"
+                    "editSkidLocation"
                   )
                   .value
                   .trim(),
-
 
               system_type:
-
                 document
                   .getElementById(
-                    "systemType"
+                    "editSystemType"
                   )
                   .value
                   .trim(),
 
-
               status:
-
                 document
                   .getElementById(
-                    "skidStatus"
+                    "editSkidStatus"
                   )
                   .value
 
-            });
+            })
+            .eq("id", id);
 
 
         if (error) {
@@ -1177,144 +2267,201 @@ const SUPABASE_PUBLISHABLE_KEY =
         }
 
 
-        alert(
-          "Skid added successfully."
-        );
-
-
-        event.target.reset();
-
+        closeEditSkidModal();
 
         await loadSkids();
 
         await loadDashboard();
 
       }
-
     );
 
 
   /*
-   ==========================================
-   SAVE WORK RECORD
-   ==========================================
+  ==================================================
+  DELETE SKID
+  ==================================================
+  */
+
+  async function deleteSkid(skidId) {
+
+    const skid =
+      allSkids.find(
+        item =>
+          item.id === skidId
+      );
+
+
+    if (
+      !confirm(
+        `Delete ${skid?.skid_number || "this skid"}?`
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    const {
+      error
+    } =
+      await supabase
+        .from("skids")
+        .delete()
+        .eq("id", skidId);
+
+
+    if (error) {
+
+      alert(
+        error.message
+      );
+
+      return;
+
+    }
+
+
+    await refreshAllData();
+
+  }
+
+
+  /*
+  ==================================================
+  SAVE WORK RECORD
+  ==================================================
   */
 
   document
-    .getElementById(
-      "workForm"
-    )
+    .getElementById("workForm")
     .addEventListener(
-
       "submit",
-
-      async event => {
-
-        event.preventDefault();
-
-
-        const {
-
-          error
-
-        } =
-          await supabase
-            .from("work_records")
-            .insert({
-
-              skid_id:
-
-                document
-                  .getElementById(
-                    "workSkid"
-                  )
-                  .value,
-
-
-              technician_id:
-
-                currentUser.id,
-
-
-              work_performed:
-
-                document
-                  .getElementById(
-                    "workPerformed"
-                  )
-                  .value,
-
-
-              time_spent:
-
-                Number(
-
-                  document
-                    .getElementById(
-                      "timeSpent"
-                    )
-                    .value
-
-                ),
-
-
-              notes:
-
-                document
-                  .getElementById(
-                    "workNotes"
-                  )
-                  .value
-
-            });
-
-
-        if (error) {
-
-          alert(error.message);
-
-          return;
-
-        }
-
-
-        alert(
-          "Work record saved."
-        );
-
-
-        event.target.reset();
-
-
-        await loadDashboard();
-
-        await loadWorkHistory();
-
-      }
-
+      saveWorkRecord
     );
 
 
+  async function saveWorkRecord(event) {
+
+    event.preventDefault();
+
+
+    const message =
+      document.getElementById(
+        "workMessage"
+      );
+
+
+    message.className =
+      "status";
+
+
+    message.textContent =
+      "Saving work record...";
+
+
+    const {
+      error
+    } =
+      await supabase
+        .from("work_records")
+        .insert({
+
+          skid_id:
+            document
+              .getElementById(
+                "workSkid"
+              )
+              .value,
+
+
+          technician_id:
+            currentUser.id,
+
+
+          work_performed:
+            document
+              .getElementById(
+                "workPerformed"
+              )
+              .value
+              .trim(),
+
+
+          time_spent:
+            Number(
+              document
+                .getElementById(
+                  "timeSpent"
+                )
+                .value
+            ),
+
+
+          notes:
+            document
+              .getElementById(
+                "workNotes"
+              )
+              .value
+              .trim()
+
+        });
+
+
+    if (error) {
+
+      message.className =
+        "status error";
+
+
+      message.textContent =
+        error.message;
+
+
+      return;
+
+    }
+
+
+    message.className =
+      "status success";
+
+
+    message.textContent =
+      "✓ Work record saved successfully.";
+
+
+    event.target.reset();
+
+
+    await loadWorkHistory();
+
+    await loadDashboard();
+
+  }
+
+
   /*
-   ==========================================
-   WORK HISTORY
-   ==========================================
+  ==================================================
+  LOAD WORK HISTORY
+  ==================================================
   */
 
   async function loadWorkHistory() {
 
     const {
-
       data,
-
       error
-
     } =
       await supabase
         .from("work_records")
         .select(`
 
           id,
+
+          technician_id,
 
           work_performed,
 
@@ -1325,6 +2472,7 @@ const SUPABASE_PUBLISHABLE_KEY =
           performed_at,
 
           skids (
+            id,
             skid_number
           ),
 
@@ -1343,12 +2491,26 @@ const SUPABASE_PUBLISHABLE_KEY =
 
     if (error) {
 
-      console.error(error);
+      console.error(
+        "Work history error:",
+        error
+      );
 
       return;
 
     }
 
+
+    allWorkRecords =
+      data || [];
+
+
+    renderHistory(allWorkRecords);
+
+  }
+
+
+  function renderHistory(records) {
 
     const table =
       document.getElementById(
@@ -1359,68 +2521,125 @@ const SUPABASE_PUBLISHABLE_KEY =
     table.innerHTML = "";
 
 
-    data.forEach(
+    if (!records.length) {
 
+      table.innerHTML = `
+        <tr>
+          <td
+            colspan="7"
+            class="empty"
+          >
+            No work records found.
+          </td>
+        </tr>
+      `;
+
+      return;
+
+    }
+
+
+    records.forEach(
       record => {
+
+        const canEdit =
+          currentProfile
+            ?.role === "admin" ||
+
+          record.technician_id ===
+            currentUser.id;
+
 
         table.innerHTML += `
 
           <tr>
 
             <td>
-
-              ${new Date(
+              ${formatDate(
                 record.performed_at
-              ).toLocaleString()}
-
-            </td>
-
-
-            <td>
-
-              ${escapeHtml(
-
-                record.skids
-                  ?.skid_number || ""
-
               )}
-
             </td>
 
 
             <td>
 
+              <button
+                onclick="viewSkid(
+                  '${record.skids?.id || ""}'
+                )"
+              >
+
+                ${escapeHtml(
+                  record.skids
+                    ?.skid_number || ""
+                )}
+
+              </button>
+
+            </td>
+
+
+            <td>
               ${escapeHtml(
                 record.work_performed
               )}
-
             </td>
 
 
             <td>
-
-              ${record.time_spent}
-
+              ${Number(
+                record.time_spent || 0
+              ).toFixed(2)}
             </td>
 
 
             <td>
-
               ${escapeHtml(
-
                 record.profiles
                   ?.full_name || ""
-
               )}
-
             </td>
 
 
             <td>
-
               ${escapeHtml(
                 record.notes || ""
               )}
+            </td>
+
+
+            <td>
+
+              ${
+                canEdit
+                  ? `
+
+                    <div class="action-buttons">
+
+                      <button
+                        class="warning"
+                        onclick="openEditWork(
+                          '${record.id}'
+                        )"
+                      >
+                        Edit
+                      </button>
+
+
+                      <button
+                        class="danger"
+                        onclick="deleteWorkRecord(
+                          '${record.id}'
+                        )"
+                      >
+                        Delete
+                      </button>
+
+                    </div>
+
+                  `
+                  : ""
+              }
 
             </td>
 
@@ -1429,16 +2648,259 @@ const SUPABASE_PUBLISHABLE_KEY =
         `;
 
       }
-
     );
 
   }
 
 
   /*
-   ==========================================
-   QR SCANNER
-   ==========================================
+  ==================================================
+  FILTER HISTORY
+  ==================================================
+  */
+
+  function filterHistory() {
+
+    const search =
+      document
+        .getElementById(
+          "historySearch"
+        )
+        .value
+        .toLowerCase();
+
+
+    const filtered =
+      allWorkRecords.filter(
+        record => {
+
+          const searchable =
+            [
+              record.skids
+                ?.skid_number,
+
+              record.work_performed,
+
+              record.notes,
+
+              record.profiles
+                ?.full_name
+            ]
+              .join(" ")
+              .toLowerCase();
+
+
+          return searchable.includes(
+            search
+          );
+
+        }
+      );
+
+
+    renderHistory(filtered);
+
+  }
+
+
+  /*
+  ==================================================
+  EDIT WORK
+  ==================================================
+  */
+
+  function openEditWork(recordId) {
+
+    const record =
+      allWorkRecords.find(
+        item =>
+          item.id === recordId
+      );
+
+
+    if (!record) {
+
+      return;
+
+    }
+
+
+    document
+      .getElementById(
+        "editWorkId"
+      )
+      .value =
+        record.id;
+
+
+    document
+      .getElementById(
+        "editWorkPerformed"
+      )
+      .value =
+        record.work_performed || "";
+
+
+    document
+      .getElementById(
+        "editTimeSpent"
+      )
+      .value =
+        record.time_spent || "";
+
+
+    document
+      .getElementById(
+        "editWorkNotes"
+      )
+      .value =
+        record.notes || "";
+
+
+    document
+      .getElementById(
+        "editWorkModal"
+      )
+      .classList.remove("hidden");
+
+  }
+
+
+  function closeEditWorkModal() {
+
+    document
+      .getElementById(
+        "editWorkModal"
+      )
+      .classList.add("hidden");
+
+  }
+
+
+  document
+    .getElementById("editWorkForm")
+    .addEventListener(
+      "submit",
+      async event => {
+
+        event.preventDefault();
+
+
+        const id =
+          document
+            .getElementById(
+              "editWorkId"
+            )
+            .value;
+
+
+        const {
+          error
+        } =
+          await supabase
+            .from("work_records")
+            .update({
+
+              work_performed:
+                document
+                  .getElementById(
+                    "editWorkPerformed"
+                  )
+                  .value
+                  .trim(),
+
+              time_spent:
+                Number(
+                  document
+                    .getElementById(
+                      "editTimeSpent"
+                    )
+                    .value
+                ),
+
+              notes:
+                document
+                  .getElementById(
+                    "editWorkNotes"
+                  )
+                  .value
+                  .trim()
+
+            })
+            .eq("id", id);
+
+
+        if (error) {
+
+          alert(
+            error.message
+          );
+
+          return;
+
+        }
+
+
+        closeEditWorkModal();
+
+        await loadWorkHistory();
+
+        await loadDashboard();
+
+      }
+    );
+
+
+  /*
+  ==================================================
+  DELETE WORK RECORD
+  ==================================================
+  */
+
+  async function deleteWorkRecord(recordId) {
+
+    if (
+      !confirm(
+        "Delete this work record?"
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    const {
+      error
+    } =
+      await supabase
+        .from("work_records")
+        .delete()
+        .eq("id", recordId);
+
+
+    if (error) {
+
+      alert(
+        error.message
+      );
+
+      return;
+
+    }
+
+
+    await loadWorkHistory();
+
+    await loadDashboard();
+
+  }
+
+
+  /*
+  ==================================================
+  QR SCANNER
+  ==================================================
   */
 
   async function startScanner() {
@@ -1461,44 +2923,27 @@ const SUPABASE_PUBLISHABLE_KEY =
       await html5QrCode.start(
 
         {
-
           facingMode:
             "environment"
-
         },
 
 
         {
-
           fps: 10,
 
-          qrbox:
-
-            {
-              width: 250,
-              height: 250
-            }
+          qrbox: {
+            width: 250,
+            height: 250
+          }
 
         },
 
 
         scannedText => {
 
-          const skidNumber =
+          handleQrScan(
             scannedText
-              .replace(
-                "SKID:",
-                ""
-              )
-              .trim();
-
-
-          selectSkidByNumber(
-            skidNumber
           );
-
-
-          stopScanner();
 
         }
 
@@ -1509,10 +2954,107 @@ const SUPABASE_PUBLISHABLE_KEY =
     catch (error) {
 
       alert(
-
         "Camera error: " +
-        error
+        error.message
+      );
 
+
+      html5QrCode = null;
+
+    }
+
+  }
+
+
+  function handleQrScan(scannedText) {
+
+    let skidNumber = "";
+
+
+    /*
+    New URL QR format:
+    https://your-site.com/?skid=SKID-001
+    */
+
+    try {
+
+      const url =
+        new URL(scannedText);
+
+
+      skidNumber =
+        url.searchParams.get(
+          "skid"
+        ) || "";
+
+    }
+
+    catch {
+
+      /*
+      Old format:
+      SKID:SKID-001
+      */
+
+      if (
+        scannedText.startsWith(
+          "SKID:"
+        )
+      ) {
+
+        skidNumber =
+          scannedText
+            .replace(
+              "SKID:",
+              ""
+            )
+            .trim();
+
+      } else {
+
+        skidNumber =
+          scannedText.trim();
+
+      }
+
+    }
+
+
+    if (!skidNumber) {
+
+      alert(
+        "QR code does not contain a skid number."
+      );
+
+      return;
+
+    }
+
+
+    const found =
+      selectSkidByNumber(
+        skidNumber
+      );
+
+
+    if (found) {
+
+      document
+        .getElementById(
+          "workMessage"
+        )
+        .textContent =
+          "✓ Selected skid: " +
+          skidNumber;
+
+
+      stopScanner();
+
+    } else {
+
+      alert(
+        "Skid not found: " +
+        skidNumber
       );
 
     }
@@ -1533,95 +3075,110 @@ const SUPABASE_PUBLISHABLE_KEY =
 
       await html5QrCode.stop();
 
+      await html5QrCode.clear();
+
     }
 
     catch (error) {
 
-      console.log(error);
+      console.log(
+        error
+      );
 
     }
 
 
     html5QrCode = null;
 
+
+    document
+      .getElementById("reader")
+      .innerHTML = "";
+
   }
 
 
   function selectSkidByNumber(
-
     skidNumber
-
   ) {
 
-    const select =
-      document.getElementById(
-        "workSkid"
+    const skid =
+      allSkids.find(
+        item =>
+          item.skid_number
+            .toLowerCase() ===
+          skidNumber
+            .toLowerCase()
       );
 
 
-    for (
+    if (!skid) {
 
-      let option
-
-      of select.options
-
-    ) {
-
-      if (
-
-        option.text ===
-        skidNumber
-
-      ) {
-
-        select.value =
-          option.value;
-
-
-        break;
-
-      }
+      return false;
 
     }
+
+
+    document
+      .getElementById(
+        "workSkid"
+      )
+      .value =
+        skid.id;
+
+
+    return true;
 
   }
 
 
   /*
-   ==========================================
-   PRINTABLE QR LABEL
-   ==========================================
+  ==================================================
+  QR LABEL
+  ==================================================
   */
 
-  function printQrLabel(
-
-    skidId,
-
+  function getSkidUrl(
     skidNumber
-
   ) {
 
-    const qrValue =
-      "SKID:" +
-      skidNumber;
+    const baseUrl =
+      window.location.origin +
+      window.location.pathname;
 
 
-    const url =
-
-      "https://api.qrserver.com/v1/create-qr-code/"
-
-      +
-
-      "?size=300x300"
-
-      +
-
-      "&data="
-
-      +
-
+    return (
+      baseUrl +
+      "?skid=" +
       encodeURIComponent(
-        qrValue
+        skidNumber
+      )
+    );
+
+  }
+
+
+  function printQrLabel(
+    skidId
+  ) {
+
+    const skid =
+      allSkids.find(
+        item =>
+          item.id === skidId
+      );
+
+
+    if (!skid) {
+
+      return;
+
+    }
+
+
+    const qrValue =
+      getSkidUrl(
+        skid.skid_number
       );
 
 
@@ -1632,57 +3189,70 @@ const SUPABASE_PUBLISHABLE_KEY =
       );
 
 
-    printWindow.document.write(
+    if (!printWindow) {
 
-      `
+      alert(
+        "Please allow popups to print QR labels."
+      );
+
+      return;
+
+    }
+
+
+    printWindow.document.write(`
 
       <!DOCTYPE html>
 
-      <html>
+      <html lang="en">
 
       <head>
 
+        <meta charset="UTF-8">
+
         <title>
-
           ${escapeHtml(
-            skidNumber
+            skid.skid_number
           )}
-
         </title>
+
+
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
 
         <style>
 
           body {
-
-            font-family:
-              Arial;
-
-            text-align:
-              center;
-
-            padding:
-              30px;
-
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 25px;
           }
 
-
-          img {
-
-            width:
-              300px;
-
-            height:
-              300px;
-
+          .label {
+            border: 3px solid #123047;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 450px;
+            margin: auto;
           }
-
 
           h1 {
+            color: #123047;
+            margin-bottom: 5px;
+          }
 
-            font-size:
-              32px;
+          h2 {
+            margin-top: 5px;
+          }
 
+          .company {
+            color: #1565c0;
+            font-weight: bold;
+          }
+
+          .meta {
+            color: #555;
+            margin: 10px 0;
           }
 
         </style>
@@ -1692,46 +3262,76 @@ const SUPABASE_PUBLISHABLE_KEY =
 
       <body>
 
-        <h1>
+        <div class="label">
 
-          ${escapeHtml(
-            skidNumber
-          )}
+          <div class="company">
+            💧 SKIDTRACK
+          </div>
 
-        </h1>
+          <h1>
+            ${escapeHtml(
+              skid.skid_number
+            )}
+          </h1>
 
+          <div class="meta">
+            ${escapeHtml(
+              skid.location || ""
+            )}
+          </div>
 
-        <img
+          <canvas id="qr"></canvas>
 
-          src="${url}"
+          <h2>
+            Scan to Log Service
+          </h2>
 
-          alt="QR Code"
+          <div class="meta">
+            Water Filtration System
+          </div>
 
-        >
-
-
-        <p>
-
-          Water Filtration Skid
-
-        </p>
+        </div>
 
 
         <script>
 
-          window.onload =
-            () => window.print();
+          QRCode.toCanvas(
 
-        </script>
+            document.getElementById("qr"),
 
+            ${JSON.stringify(qrValue)},
+
+            {
+              width: 300,
+              margin: 2
+            },
+
+            function(error) {
+
+              if (error) {
+
+                console.error(error);
+
+              }
+
+              setTimeout(
+                function() {
+                  window.print();
+                },
+                500
+              );
+
+            }
+
+          );
+
+        <\/script>
 
       </body>
 
       </html>
 
-      `
-
-    );
+    `);
 
 
     printWindow.document.close();
@@ -1740,14 +3340,405 @@ const SUPABASE_PUBLISHABLE_KEY =
 
 
   /*
-   ==========================================
-   SECURITY HELPERS
-   ==========================================
+  ==================================================
+  SKID DETAIL PAGE
+  ==================================================
   */
+
+  async function viewSkid(
+    skidId
+  ) {
+
+    if (!skidId) {
+
+      return;
+
+    }
+
+
+    showPage(
+      "skidDetail"
+    );
+
+
+    const content =
+      document.getElementById(
+        "skidDetailContent"
+      );
+
+
+    content.innerHTML =
+      "Loading skid details...";
+
+
+    const skid =
+      allSkids.find(
+        item =>
+          item.id === skidId
+      );
+
+
+    if (!skid) {
+
+      content.innerHTML =
+        "Skid not found.";
+
+      return;
+
+    }
+
+
+    const records =
+      allWorkRecords.filter(
+        record =>
+          record.skids?.id === skidId
+      );
+
+
+    const totalHours =
+      records.reduce(
+        (
+          total,
+          record
+        ) =>
+          total +
+          Number(
+            record.time_spent || 0
+          ),
+
+        0
+      );
+
+
+    content.innerHTML = `
+
+      <div class="card skid-detail">
+
+        <h2>
+          💧 ${escapeHtml(
+            skid.skid_number
+          )}
+        </h2>
+
+
+        <div class="skid-detail-meta">
+
+          <strong>Location:</strong>
+          ${escapeHtml(
+            skid.location || "Not specified"
+          )}
+
+          &nbsp; | &nbsp;
+
+          <strong>System:</strong>
+          ${escapeHtml(
+            skid.system_type || "Not specified"
+          )}
+
+          &nbsp; | &nbsp;
+
+          <strong>Status:</strong>
+          ${formatStatus(
+            skid.status
+          )}
+
+        </div>
+
+
+        <div class="grid">
+
+          <div class="card">
+
+            <div class="stat">
+              ${records.length}
+            </div>
+
+            <div class="stat-label">
+              Service Records
+            </div>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="stat">
+              ${totalHours.toFixed(2)}
+            </div>
+
+            <div class="stat-label">
+              Total Labor Hours
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <br>
+
+
+        <button
+          class="secondary"
+          onclick="printQrLabel(
+            '${skid.id}'
+          )"
+        >
+          Print QR Label
+        </button>
+
+
+        <button
+          class="success"
+          onclick="logWorkForSkid(
+            '${skid.id}'
+          )"
+        >
+          Log Work for This Skid
+        </button>
+
+      </div>
+
+
+      <div class="card">
+
+        <h3>Service History</h3>
+
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Date</th>
+                <th>Work</th>
+                <th>Hours</th>
+                <th>Technician</th>
+                <th>Notes</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${
+                records.length
+
+                  ? records.map(
+                      record => `
+
+                        <tr>
+
+                          <td>
+                            ${formatDate(
+                              record.performed_at
+                            )}
+                          </td>
+
+                          <td>
+                            ${escapeHtml(
+                              record.work_performed
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              record.time_spent || 0
+                            ).toFixed(2)}
+                          </td>
+
+                          <td>
+                            ${escapeHtml(
+                              record.profiles
+                                ?.full_name || ""
+                            )}
+                          </td>
+
+                          <td>
+                            ${escapeHtml(
+                              record.notes || ""
+                            )}
+                          </td>
+
+                        </tr>
+
+                      `
+                    ).join("")
+
+                  : `
+
+                    <tr>
+
+                      <td
+                        colspan="5"
+                        class="empty"
+                      >
+                        No service records yet.
+                      </td>
+
+                    </tr>
+
+                  `
+
+              }
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  function logWorkForSkid(
+    skidId
+  ) {
+
+    showPage("work");
+
+
+    document
+      .getElementById(
+        "workSkid"
+      )
+      .value =
+        skidId;
+
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+
+  }
+
+
+  /*
+  ==================================================
+  HANDLE QR URL
+  ==================================================
+  */
+
+  function handleSkidUrl() {
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+
+    const skidNumber =
+      params.get("skid");
+
+
+    if (!skidNumber) {
+
+      return;
+
+    }
+
+
+    const skid =
+      allSkids.find(
+        item =>
+          item.skid_number
+            .toLowerCase() ===
+          skidNumber
+            .toLowerCase()
+      );
+
+
+    if (!skid) {
+
+      return;
+
+    }
+
+
+    selectSkidByNumber(
+      skidNumber
+    );
+
+
+    showPage("work");
+
+
+    document
+      .getElementById(
+        "workMessage"
+      )
+      .className =
+        "status success";
+
+
+    document
+      .getElementById(
+        "workMessage"
+      )
+      .textContent =
+        "✓ QR code opened Skid " +
+        skid.skid_number;
+
+  }
+
+
+  /*
+  ==================================================
+  HELPERS
+  ==================================================
+  */
+
+  function formatDate(value) {
+
+    if (!value) {
+
+      return "";
+
+    }
+
+
+    return new Date(
+      value
+    ).toLocaleString();
+
+  }
+
+
+  function formatStatus(status) {
+
+    if (!status) {
+
+      return "";
+
+    }
+
+
+    return status
+      .replaceAll("_", " ")
+      .replace(
+        /\b\w/g,
+        letter =>
+          letter.toUpperCase()
+      );
+
+  }
+
 
   function escapeHtml(value) {
 
-    return String(value || "")
+    return String(
+      value ?? ""
+    )
 
       .replace(
         /&/g,
@@ -1777,22 +3768,10 @@ const SUPABASE_PUBLISHABLE_KEY =
   }
 
 
-  function escapeAttribute(value) {
-
-    return String(value || "")
-
-      .replace(
-        /'/g,
-        "\\'"
-      );
-
-  }
-
-
   /*
-   ==========================================
-   START APPLICATION
-   ==========================================
+  ==================================================
+  START APPLICATION
+  ==================================================
   */
 
   checkSession();
@@ -1801,3 +3780,4 @@ const SUPABASE_PUBLISHABLE_KEY =
 
 </body>
 </html>
+```
