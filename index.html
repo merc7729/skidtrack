@@ -1,64 +1,1794 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SkidTrack Cloud | Water Filtration Service</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<style>
-:root{--blue:#0b5cab;--dark:#102a43;--bg:#f4f7fb;--card:#fff;--muted:#6b7c93;--line:#dce4ee;--green:#138a5b;--orange:#c87500;--red:#c33}
-*{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--dark)}
-header{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10}
-.brand{font-size:22px;font-weight:800;color:var(--blue)} .brand span{color:#38a169}.user{color:var(--muted);font-size:14px}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px)}
-aside{background:#102a43;color:#fff;padding:18px 12px}.navbtn{width:100%;text-align:left;border:0;background:transparent;color:#cbd5e1;padding:13px 14px;border-radius:8px;margin:3px 0;font-size:15px;cursor:pointer}.navbtn:hover,.navbtn.active{background:#1e4970;color:#fff}
-main{padding:26px;max-width:1500px;width:100%;margin:auto}.page{display:none}.page.active{display:block}h1{margin:0 0 6px;font-size:28px} .sub{color:var(--muted);margin:0 0 22px}
-.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,1fr)}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 2px 6px rgba(20,40,60,.03)}
-.statlabel{font-size:13px;color:var(--muted)}.statnum{font-size:30px;font-weight:800;margin-top:8px}
-.two{grid-template-columns:1.2fr .8fr}.three{grid-template-columns:repeat(3,1fr)}
-button.primary{background:var(--blue);color:#fff;border:0;padding:10px 15px;border-radius:8px;font-weight:700;cursor:pointer}button.secondary{background:#fff;color:var(--dark);border:1px solid var(--line);padding:10px 15px;border-radius:8px;cursor:pointer}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f6ef;color:var(--green);font-size:12px;font-weight:700}
-input,textarea,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}.field{margin-bottom:14px}
-form .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.empty{color:var(--muted);text-align:center;padding:28px}
-#scanner{min-height:230px;background:#0f172a;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:14px}
-#reader video{max-width:100%}.bar{height:10px;background:#e8edf3;border-radius:10px;overflow:hidden}.bar i{display:block;height:100%;background:var(--blue);border-radius:10px}
-.small{font-size:12px;color:var(--muted)}.search{max-width:330px}
-.modal{position:fixed;inset:0;background:rgba(10,25,40,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.show{display:flex}.modalbox{width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:14px;padding:22px}.close{float:right;border:0;background:#eee;border-radius:6px;padding:6px 9px;cursor:pointer}
-.kpi{font-size:12px;color:var(--muted)}canvas{max-width:100%}
-@media(max-width:900px){.app{grid-template-columns:1fr}aside{display:flex;overflow:auto;padding:8px}.navbtn{white-space:nowrap;width:auto}.stats{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}main{padding:16px}form .row{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>SkidTrack</title>
+
+  <!-- QR Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      color: #1f2937;
+    }
+
+    header {
+      background: #123047;
+      color: white;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+    }
+
+    .container {
+      padding: 25px;
+      max-width: 1400px;
+      margin: auto;
+    }
+
+    .login-box {
+      max-width: 420px;
+      margin: 80px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.1);
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #1565c0;
+      color: white;
+      font-weight: bold;
+    }
+
+    button.secondary {
+      background: #6b7280;
+    }
+
+    button.danger {
+      background: #c62828;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .stat {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1565c0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #eef3f7;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .status {
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    #reader {
+      max-width: 500px;
+    }
+
+    .role {
+      background: #e3f2fd;
+      padding: 5px 10px;
+      border-radius: 20px;
+    }
+
+    @media print {
+      header, nav, button, .no-print {
+        display: none !important;
+      }
+
+      body {
+        background: white;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<header><div class="brand">Skid<span>Track</span> Cloud</div><div class="user" id="userLabel">Not signed in</div></header>
-<div id="login" style="max-width:420px;margin:70px auto" class="card"><h1>Employee Login</h1><p class="sub">Water Filtration Service Management</p><div class="field"><label>Email</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password"></div><button class="primary" id="loginBtn">Sign In</button><p class="small">Employee accounts are managed by your company administrator.</p></div>
-<div class="app" id="app" style="display:none"><aside>
-<button class="navbtn active" data-page="dashboard">📊 Dashboard</button><button class="navbtn" data-page="logwork">🛠 Log Work</button><button class="navbtn" data-page="skids">🔢 Skids & QR Labels</button><button class="navbtn" data-page="history">📋 Work History</button><button class="navbtn" data-page="reports">📈 Reports</button><button class="navbtn" id="logoutBtn">🚪 Sign Out</button></aside><main>
-<section id="dashboard" class="page active"><h1>Service Dashboard</h1><p class="sub">Shared cloud data for your filtration service team.</p><div class="grid stats"><div class="card"><div class="statlabel">Total Skids</div><div class="statnum" id="statSkids">0</div></div><div class="card"><div class="statlabel">Work Orders</div><div class="statnum" id="statWork">0</div></div><div class="card"><div class="statlabel">Labor Hours</div><div class="statnum" id="statHours">0</div></div><div class="card"><div class="statlabel">Technicians</div><div class="statnum" id="statTechs">0</div></div></div><div class="card" style="margin-top:16px"><h3>Recent Service Activity</h3><div id="recent"></div></div></section>
-<section id="logwork" class="page"><h1>Log Work</h1><p class="sub">Scan the QR code or enter a skid number.</p><div class="grid two"><div class="card"><h3>QR Scanner</h3><div id="scanner"><div id="reader">Camera scanner</div></div><div class="actions"><button class="primary" id="startScan">Start Camera Scan</button><button class="secondary" id="stopScan">Stop Scanner</button></div></div><div class="card"><h3>Service Entry</h3><form id="workForm"><div class="field"><label>Skid Number</label><input id="workSkid" required></div><div class="field"><label>Work Performed</label><textarea id="workDone" rows="4" required></textarea></div><div class="field"><label>Time Spent (hours)</label><input id="workHours" type="number" min="0" step="0.25" required></div><div class="field"><label>Notes</label><textarea id="workNotes" rows="2"></textarea></div><button class="primary">Save Cloud Record</button></form></div></div></section>
-<section id="skids" class="page"><div class="actions"><div><h1>Skids & Printable QR Labels</h1><p class="sub">Each QR code contains the skid number.</p></div><button class="primary" id="addSkidBtn">+ Add Skid</button></div><div class="card"><div style="overflow:auto"><table><thead><tr><th>Skid</th><th>Location</th><th>System</th><th>Status</th><th>QR Label</th></tr></thead><tbody id="skidRows"></tbody></table></div></div></section>
-<section id="history" class="page"><h1>Work History</h1><div class="card"><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Technician</th><th>Notes</th></tr></thead><tbody id="historyRows"></tbody></table></div></div></section>
-<section id="reports" class="page"><h1>Reports</h1><div class="grid three"><div class="card"><h3>Hours by Skid</h3><div id="hoursBySkid"></div></div><div class="card"><h3>Hours by Technician</h3><div id="hoursByTech"></div></div><div class="card"><h3>Export</h3><button class="primary" id="exportBtn">Download CSV</button></div></div></section>
-</main></div>
-<div id="skidModal" class="modal"><div class="modalbox"><button class="close" onclick="closeModal()">✕</button><h2>Add Skid</h2><form id="skidForm"><div class="field"><label>Skid Number</label><input id="skidNumber" required></div><div class="field"><label>Location</label><input id="skidLocation"></div><div class="field"><label>System Type</label><input id="skidSystem"></div><div class="field"><label>Status</label><select id="skidStatus"><option>Active</option><option>Maintenance</option><option>Out of Service</option></select></div><button class="primary">Save Skid</button></form></div></div>
-<div id="qrModal" class="modal"><div class="modalbox" id="printArea"><button class="close" onclick="closeQR()">✕</button><h2 id="qrTitle"></h2><div id="qrcode" style="width:220px;margin:20px auto"></div><p style="text-align:center">Scan to open this skid in SkidTrack</p><button class="primary" onclick="window.print()">Print Label</button></div></div>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<!-- LOGIN SCREEN -->
+
+<div id="loginScreen">
+
+  <div class="login-box">
+
+    <h1>SkidTrack</h1>
+
+    <p>Water Filtration Service Management</p>
+
+    <form id="loginForm">
+
+      <label>Email</label>
+
+      <input
+        type="email"
+        id="loginEmail"
+        required
+      >
+
+      <label>Password</label>
+
+      <input
+        type="password"
+        id="loginPassword"
+        required
+      >
+
+      <button type="submit">
+        Sign In
+      </button>
+
+    </form>
+
+    <p id="loginMessage"></p>
+
+  </div>
+
+</div>
+
+
+<!-- APPLICATION -->
+
+<div id="appScreen" class="hidden">
+
+  <header>
+
+    <h1>💧 SkidTrack</h1>
+
+    <div>
+
+      <span id="employeeName"></span>
+
+      <span
+        id="employeeRole"
+        class="role"
+      ></span>
+
+      <button
+        class="secondary"
+        onclick="logout()"
+      >
+        Logout
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <div class="container">
+
+    <nav>
+
+      <button onclick="showPage('dashboard')">
+        Dashboard
+      </button>
+
+      <button onclick="showPage('work')">
+        Log Work
+      </button>
+
+      <button onclick="showPage('skids')">
+        Skids
+      </button>
+
+      <button onclick="showPage('history')">
+        Work History
+      </button>
+
+    </nav>
+
+
+    <!-- DASHBOARD -->
+
+    <div
+      id="dashboard"
+      class="page active"
+    >
+
+      <h2>Dashboard</h2>
+
+      <div class="grid">
+
+        <div class="card">
+
+          <h3>Total Skids</h3>
+
+          <div
+            id="totalSkids"
+            class="stat"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <h3>Work Records</h3>
+
+          <div
+            id="totalWork"
+            class="stat"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <h3>Total Labor Hours</h3>
+
+          <div
+            id="totalHours"
+            class="stat"
+          >
+            0
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- LOG WORK -->
+
+    <div
+      id="work"
+      class="page"
+    >
+
+      <h2>Log Work</h2>
+
+      <div class="grid">
+
+        <div class="card">
+
+          <h3>Scan Skid QR Code</h3>
+
+          <div id="reader"></div>
+
+          <br>
+
+          <button
+            onclick="startScanner()"
+          >
+            Start Scanner
+          </button>
+
+          <button
+            class="secondary"
+            onclick="stopScanner()"
+          >
+            Stop Scanner
+          </button>
+
+        </div>
+
+
+        <div class="card">
+
+          <h3>Service Record</h3>
+
+          <form id="workForm">
+
+            <label>Skid</label>
+
+            <select
+              id="workSkid"
+              required
+            ></select>
+
+
+            <label>
+              Work Performed
+            </label>
+
+            <textarea
+              id="workPerformed"
+              required
+            ></textarea>
+
+
+            <label>
+              Time Spent (Hours)
+            </label>
+
+            <input
+              type="number"
+              step="0.25"
+              min="0"
+              id="timeSpent"
+              required
+            >
+
+
+            <label>Notes</label>
+
+            <textarea
+              id="workNotes"
+            ></textarea>
+
+
+            <button type="submit">
+
+              Save Work Record
+
+            </button>
+
+          </form>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- SKIDS -->
+
+    <div
+      id="skids"
+      class="page"
+    >
+
+      <h2>Filtration Skids</h2>
+
+
+      <div class="card no-print">
+
+        <h3>Add Skid</h3>
+
+        <form id="skidForm">
+
+          <label>Skid Number</label>
+
+          <input
+            id="skidNumber"
+            required
+          >
+
+
+          <label>Location</label>
+
+          <input
+            id="skidLocation"
+          >
+
+
+          <label>System Type</label>
+
+          <input
+            id="systemType"
+          >
+
+
+          <label>Status</label>
+
+          <select id="skidStatus">
+
+            <option value="active">
+              Active
+            </option>
+
+            <option value="maintenance">
+              Maintenance
+            </option>
+
+            <option value="out_of_service">
+              Out of Service
+            </option>
+
+          </select>
+
+
+          <button type="submit">
+
+            Add Skid
+
+          </button>
+
+        </form>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="card">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Skid Number</th>
+
+              <th>Location</th>
+
+              <th>System</th>
+
+              <th>Status</th>
+
+              <th>QR Label</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="skidTable">
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <!-- HISTORY -->
+
+    <div
+      id="history"
+      class="page"
+    >
+
+      <h2>Work History</h2>
+
+      <div class="card">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Date</th>
+
+              <th>Skid</th>
+
+              <th>Work Performed</th>
+
+              <th>Hours</th>
+
+              <th>Technician</th>
+
+              <th>Notes</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="historyTable">
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
 <script>
-const SUPABASE_URL='https://secrzzjegeuppgziyojk.supabase.com', SUPABASE_ANON_KEY='sb_secret_bIkY4OsjoZY-GTEYT6AIFA_jaQhnjzd';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); let currentUser=null,profile=null,skids=[],work=[],scanner=null;
-const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-async function init(){let {data:{session}}=await sb.auth.getSession();if(session) await signedIn(session.user);}
-async function signedIn(user){currentUser=user;let r=await sb.from('profiles').select('*').eq('id',user.id).single();profile=r.data||{full_name:user.email,role:'technician'};$('login').style.display='none';$('app').style.display='grid';$('userLabel').textContent=(profile.full_name||user.email)+' • '+profile.role;await loadData();}
-$('loginBtn').onclick=async()=>{let r=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(r.error)return alert(r.error.message);await signedIn(r.data.user)};
-$('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
-document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(b.dataset.page).classList.add('active');document.querySelectorAll('.navbtn[data-page]').forEach(x=>x.classList.toggle('active',x===b))});
-async function loadData(){let [s,w]=await Promise.all([sb.from('skids').select('*').order('skid_number'),sb.from('work_records').select('*').order('created_at',{ascending:false})]);if(s.error||w.error){alert((s.error||w.error).message);return}skids=s.data;work=w.data;render();}
-function render(){$('statSkids').textContent=skids.length;$('statWork').textContent=work.length;$('statHours').textContent=work.reduce((a,x)=>a+Number(x.hours),0).toFixed(2);$('statTechs').textContent=new Set(work.map(x=>x.technician_name).filter(Boolean)).size;$('recent').innerHTML=work.slice(0,8).map(x=>`<div style="padding:10px;border-bottom:1px solid #dce4ee"><b>${esc(x.skid_number)}</b> — ${esc(x.work_performed)} <span class="small">${new Date(x.created_at).toLocaleString()} • ${x.hours} hrs • ${esc(x.technician_name)}</span></div>`).join('')||'<div class="empty">No records.</div>';$('skidRows').innerHTML=skids.map(x=>`<tr><td><b>${esc(x.skid_number)}</b></td><td>${esc(x.location)}</td><td>${esc(x.system_type)}</td><td><span class="badge">${esc(x.status)}</span></td><td><button class="secondary" onclick="showQR('${encodeURIComponent(x.skid_number)}')">View / Print QR</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No skids.</td></tr>';$('historyRows').innerHTML=work.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td><b>${esc(x.skid_number)}</b></td><td>${esc(x.work_performed)}</td><td>${x.hours}</td><td>${esc(x.technician_name)}</td><td>${esc(x.notes)}</td></tr>`).join('');let group=(arr,key)=>arr.reduce((a,x)=>(a[x[key]||'Unknown']=(a[x[key]||'Unknown']||0)+Number(x.hours),a),{}), bars=o=>Object.entries(o).map(([k,v])=>`<p><b>${esc(k)}</b><br>${v.toFixed(2)} hrs</p>`).join('')||'No data';$('hoursBySkid').innerHTML=bars(group(work,'skid_number'));$('hoursByTech').innerHTML=bars(group(work,'technician_name'));}
-$('workForm').onsubmit=async e=>{e.preventDefault();let skid=$('workSkid').value.trim(),match=skids.find(x=>x.skid_number===skid);let r=await sb.from('work_records').insert({skid_id:match?.id||null,skid_number:skid,work_performed:$('workDone').value.trim(),hours:Number($('workHours').value),technician_id:currentUser.id,technician_name:profile.full_name||currentUser.email,notes:$('workNotes').value.trim()});if(r.error)return alert(r.error.message);e.target.reset();await loadData();alert('Work saved to cloud.');};
-$('addSkidBtn').onclick=()=>{if(!['admin','manager'].includes(profile.role))return alert('Only managers can add skids.');$('skidModal').classList.add('show')};function closeModal(){$('skidModal').classList.remove('show')};$('skidForm').onsubmit=async e=>{e.preventDefault();let r=await sb.from('skids').insert({skid_number:$('skidNumber').value.trim(),location:$('skidLocation').value.trim(),system_type:$('skidSystem').value.trim(),status:$('skidStatus').value});if(r.error)return alert(r.error.message);e.target.reset();closeModal();await loadData();};
-function showQR(v){let n=decodeURIComponent(v);$('qrTitle').textContent='Skid '+n;$('qrcode').innerHTML='';new QRCode($('qrcode'),{text:'SKID:'+n,width:220,height:220});$('qrModal').classList.add('show')};function closeQR(){$('qrModal').classList.remove('show')};
-$('exportBtn').onclick=()=>{let rows=[['Date','Skid','Work','Hours','Technician','Notes'],...work.map(x=>[x.created_at,x.skid_number,x.work_performed,x.hours,x.technician_name,x.notes])];let csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='skidtrack-work.csv';a.click()};
-$('startScan').onclick=async()=>{try{scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:220},t=>{$('workSkid').value=t.replace(/^SKID:/i,'').trim();scanner.stop()})}catch(e){alert(e.message||e)}};$('stopScan').onclick=()=>scanner?.stop();
-init();
-</script></body></html>
+
+  /*
+   ==========================================
+   SUPABASE CONFIGURATION
+   ==========================================
+  */
+
+  const SUPABASE_URL =
+    "YOUR_SUPABASE_PROJECT_URL";
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    "YOUR_SUPABASE_PUBLISHABLE_KEY";
+
+
+  const supabase =
+    window.supabase.createClient(
+
+      SUPABASE_URL,
+
+      SUPABASE_PUBLISHABLE_KEY
+
+    );
+
+
+  /*
+   ==========================================
+   GLOBAL VARIABLES
+   ==========================================
+  */
+
+  let currentUser = null;
+
+  let currentProfile = null;
+
+  let html5QrCode = null;
+
+
+  /*
+   ==========================================
+   LOGIN
+   ==========================================
+  */
+
+  document
+    .getElementById("loginForm")
+    .addEventListener(
+      "submit",
+      login
+    );
+
+
+  async function login(event) {
+
+    event.preventDefault();
+
+
+    const email =
+      document.getElementById(
+        "loginEmail"
+      ).value;
+
+
+    const password =
+      document.getElementById(
+        "loginPassword"
+      ).value;
+
+
+    const message =
+      document.getElementById(
+        "loginMessage"
+      );
+
+
+    message.textContent =
+      "Signing in...";
+
+
+    const {
+
+      data,
+
+      error
+
+    } =
+      await supabase.auth.signInWithPassword({
+
+        email: email,
+
+        password: password
+
+      });
+
+
+    if (error) {
+
+      message.textContent =
+        error.message;
+
+      return;
+
+    }
+
+
+    currentUser =
+      data.user;
+
+
+    await loadUserProfile();
+
+    openApplication();
+
+  }
+
+
+  /*
+   ==========================================
+   LOAD USER PROFILE
+   ==========================================
+  */
+
+  async function loadUserProfile() {
+
+    const {
+
+      data,
+
+      error
+
+    } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .eq(
+          "id",
+          currentUser.id
+        )
+        .single();
+
+
+    if (error) {
+
+      console.error(error);
+
+      return;
+
+    }
+
+
+    currentProfile = data;
+
+
+    document
+      .getElementById(
+        "employeeName"
+      )
+      .textContent =
+        data.full_name || "Employee";
+
+
+    document
+      .getElementById(
+        "employeeRole"
+      )
+      .textContent =
+        data.role;
+
+  }
+
+
+  /*
+   ==========================================
+   CHECK EXISTING LOGIN
+   ==========================================
+  */
+
+  async function checkSession() {
+
+    const {
+
+      data:
+
+      {
+        session
+
+      }
+
+    } =
+      await supabase.auth.getSession();
+
+
+    if (!session) {
+
+      return;
+
+    }
+
+
+    currentUser =
+      session.user;
+
+
+    await loadUserProfile();
+
+
+    openApplication();
+
+  }
+
+
+  /*
+   ==========================================
+   OPEN APPLICATION
+   ==========================================
+  */
+
+  async function openApplication() {
+
+    document
+      .getElementById(
+        "loginScreen"
+      )
+      .classList
+      .add("hidden");
+
+
+    document
+      .getElementById(
+        "appScreen"
+      )
+      .classList
+      .remove("hidden");
+
+
+    await loadDashboard();
+
+    await loadSkids();
+
+    await loadWorkHistory();
+
+  }
+
+
+  /*
+   ==========================================
+   LOGOUT
+   ==========================================
+  */
+
+  async function logout() {
+
+    await supabase.auth.signOut();
+
+
+    currentUser = null;
+
+    currentProfile = null;
+
+
+    document
+      .getElementById(
+        "appScreen"
+      )
+      .classList
+      .add("hidden");
+
+
+    document
+      .getElementById(
+        "loginScreen"
+      )
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  /*
+   ==========================================
+   NAVIGATION
+   ==========================================
+  */
+
+  function showPage(pageId) {
+
+    document
+      .querySelectorAll(".page")
+      .forEach(
+
+        page =>
+
+          page.classList.remove(
+            "active"
+          )
+
+      );
+
+
+    document
+      .getElementById(pageId)
+      .classList.add("active");
+
+  }
+
+
+  /*
+   ==========================================
+   DASHBOARD
+   ==========================================
+  */
+
+  async function loadDashboard() {
+
+    const {
+
+      count: skidCount
+
+    } =
+      await supabase
+        .from("skids")
+        .select(
+          "*",
+          {
+            count: "exact",
+            head: true
+          }
+        );
+
+
+    const {
+
+      data: work
+
+    } =
+      await supabase
+        .from("work_records")
+        .select("time_spent");
+
+
+    const hours =
+      work
+        ? work.reduce(
+
+            (
+
+              total,
+
+              record
+
+            ) =>
+
+              total +
+              Number(
+                record.time_spent
+              ),
+
+            0
+
+          )
+
+        : 0;
+
+
+    document
+      .getElementById(
+        "totalSkids"
+      )
+      .textContent =
+        skidCount || 0;
+
+
+    document
+      .getElementById(
+        "totalWork"
+      )
+      .textContent =
+        work
+          ? work.length
+          : 0;
+
+
+    document
+      .getElementById(
+        "totalHours"
+      )
+      .textContent =
+        hours.toFixed(2);
+
+  }
+
+
+  /*
+   ==========================================
+   LOAD SKIDS
+   ==========================================
+  */
+
+  async function loadSkids() {
+
+    const {
+
+      data,
+
+      error
+
+    } =
+      await supabase
+        .from("skids")
+        .select("*")
+        .order(
+          "skid_number"
+        );
+
+
+    if (error) {
+
+      console.error(error);
+
+      return;
+
+    }
+
+
+    const table =
+      document.getElementById(
+        "skidTable"
+      );
+
+
+    const select =
+      document.getElementById(
+        "workSkid"
+      );
+
+
+    table.innerHTML = "";
+
+    select.innerHTML =
+      '<option value="">Select Skid</option>';
+
+
+    data.forEach(
+
+      skid => {
+
+        table.innerHTML += `
+
+          <tr>
+
+            <td>
+
+              ${escapeHtml(
+                skid.skid_number
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+                skid.location || ""
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+                skid.system_type || ""
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+                skid.status
+              )}
+
+            </td>
+
+
+            <td>
+
+              <button
+
+                onclick="printQrLabel(
+                  '${skid.id}',
+                  '${escapeAttribute(
+                    skid.skid_number
+                  )}'
+                )"
+
+              >
+
+                Print QR
+
+              </button>
+
+            </td>
+
+          </tr>
+
+        `;
+
+
+        select.innerHTML += `
+
+          <option value="${skid.id}">
+
+            ${escapeHtml(
+              skid.skid_number
+            )}
+
+          </option>
+
+        `;
+
+      }
+
+    );
+
+  }
+
+
+  /*
+   ==========================================
+   ADD SKID
+   ==========================================
+  */
+
+  document
+    .getElementById(
+      "skidForm"
+    )
+    .addEventListener(
+
+      "submit",
+
+      async event => {
+
+        event.preventDefault();
+
+
+        const {
+
+          error
+
+        } =
+          await supabase
+            .from("skids")
+            .insert({
+
+              skid_number:
+
+                document
+                  .getElementById(
+                    "skidNumber"
+                  )
+                  .value
+                  .trim(),
+
+
+              location:
+
+                document
+                  .getElementById(
+                    "skidLocation"
+                  )
+                  .value
+                  .trim(),
+
+
+              system_type:
+
+                document
+                  .getElementById(
+                    "systemType"
+                  )
+                  .value
+                  .trim(),
+
+
+              status:
+
+                document
+                  .getElementById(
+                    "skidStatus"
+                  )
+                  .value
+
+            });
+
+
+        if (error) {
+
+          alert(error.message);
+
+          return;
+
+        }
+
+
+        alert(
+          "Skid added successfully."
+        );
+
+
+        event.target.reset();
+
+
+        await loadSkids();
+
+        await loadDashboard();
+
+      }
+
+    );
+
+
+  /*
+   ==========================================
+   SAVE WORK RECORD
+   ==========================================
+  */
+
+  document
+    .getElementById(
+      "workForm"
+    )
+    .addEventListener(
+
+      "submit",
+
+      async event => {
+
+        event.preventDefault();
+
+
+        const {
+
+          error
+
+        } =
+          await supabase
+            .from("work_records")
+            .insert({
+
+              skid_id:
+
+                document
+                  .getElementById(
+                    "workSkid"
+                  )
+                  .value,
+
+
+              technician_id:
+
+                currentUser.id,
+
+
+              work_performed:
+
+                document
+                  .getElementById(
+                    "workPerformed"
+                  )
+                  .value,
+
+
+              time_spent:
+
+                Number(
+
+                  document
+                    .getElementById(
+                      "timeSpent"
+                    )
+                    .value
+
+                ),
+
+
+              notes:
+
+                document
+                  .getElementById(
+                    "workNotes"
+                  )
+                  .value
+
+            });
+
+
+        if (error) {
+
+          alert(error.message);
+
+          return;
+
+        }
+
+
+        alert(
+          "Work record saved."
+        );
+
+
+        event.target.reset();
+
+
+        await loadDashboard();
+
+        await loadWorkHistory();
+
+      }
+
+    );
+
+
+  /*
+   ==========================================
+   WORK HISTORY
+   ==========================================
+  */
+
+  async function loadWorkHistory() {
+
+    const {
+
+      data,
+
+      error
+
+    } =
+      await supabase
+        .from("work_records")
+        .select(`
+
+          id,
+
+          work_performed,
+
+          time_spent,
+
+          notes,
+
+          performed_at,
+
+          skids (
+            skid_number
+          ),
+
+          profiles (
+            full_name
+          )
+
+        `)
+        .order(
+          "performed_at",
+          {
+            ascending: false
+          }
+        );
+
+
+    if (error) {
+
+      console.error(error);
+
+      return;
+
+    }
+
+
+    const table =
+      document.getElementById(
+        "historyTable"
+      );
+
+
+    table.innerHTML = "";
+
+
+    data.forEach(
+
+      record => {
+
+        table.innerHTML += `
+
+          <tr>
+
+            <td>
+
+              ${new Date(
+                record.performed_at
+              ).toLocaleString()}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+
+                record.skids
+                  ?.skid_number || ""
+
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+                record.work_performed
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${record.time_spent}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+
+                record.profiles
+                  ?.full_name || ""
+
+              )}
+
+            </td>
+
+
+            <td>
+
+              ${escapeHtml(
+                record.notes || ""
+              )}
+
+            </td>
+
+          </tr>
+
+        `;
+
+      }
+
+    );
+
+  }
+
+
+  /*
+   ==========================================
+   QR SCANNER
+   ==========================================
+  */
+
+  async function startScanner() {
+
+    if (html5QrCode) {
+
+      return;
+
+    }
+
+
+    html5QrCode =
+      new Html5Qrcode(
+        "reader"
+      );
+
+
+    try {
+
+      await html5QrCode.start(
+
+        {
+
+          facingMode:
+            "environment"
+
+        },
+
+
+        {
+
+          fps: 10,
+
+          qrbox:
+
+            {
+              width: 250,
+              height: 250
+            }
+
+        },
+
+
+        scannedText => {
+
+          const skidNumber =
+            scannedText
+              .replace(
+                "SKID:",
+                ""
+              )
+              .trim();
+
+
+          selectSkidByNumber(
+            skidNumber
+          );
+
+
+          stopScanner();
+
+        }
+
+      );
+
+    }
+
+    catch (error) {
+
+      alert(
+
+        "Camera error: " +
+        error
+
+      );
+
+    }
+
+  }
+
+
+  async function stopScanner() {
+
+    if (!html5QrCode) {
+
+      return;
+
+    }
+
+
+    try {
+
+      await html5QrCode.stop();
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
+
+
+    html5QrCode = null;
+
+  }
+
+
+  function selectSkidByNumber(
+
+    skidNumber
+
+  ) {
+
+    const select =
+      document.getElementById(
+        "workSkid"
+      );
+
+
+    for (
+
+      let option
+
+      of select.options
+
+    ) {
+
+      if (
+
+        option.text ===
+        skidNumber
+
+      ) {
+
+        select.value =
+          option.value;
+
+
+        break;
+
+      }
+
+    }
+
+  }
+
+
+  /*
+   ==========================================
+   PRINTABLE QR LABEL
+   ==========================================
+  */
+
+  function printQrLabel(
+
+    skidId,
+
+    skidNumber
+
+  ) {
+
+    const qrValue =
+      "SKID:" +
+      skidNumber;
+
+
+    const url =
+
+      "https://api.qrserver.com/v1/create-qr-code/"
+
+      +
+
+      "?size=300x300"
+
+      +
+
+      "&data="
+
+      +
+
+      encodeURIComponent(
+        qrValue
+      );
+
+
+    const printWindow =
+      window.open(
+        "",
+        "_blank"
+      );
+
+
+    printWindow.document.write(
+
+      `
+
+      <!DOCTYPE html>
+
+      <html>
+
+      <head>
+
+        <title>
+
+          ${escapeHtml(
+            skidNumber
+          )}
+
+        </title>
+
+
+        <style>
+
+          body {
+
+            font-family:
+              Arial;
+
+            text-align:
+              center;
+
+            padding:
+              30px;
+
+          }
+
+
+          img {
+
+            width:
+              300px;
+
+            height:
+              300px;
+
+          }
+
+
+          h1 {
+
+            font-size:
+              32px;
+
+          }
+
+        </style>
+
+      </head>
+
+
+      <body>
+
+        <h1>
+
+          ${escapeHtml(
+            skidNumber
+          )}
+
+        </h1>
+
+
+        <img
+
+          src="${url}"
+
+          alt="QR Code"
+
+        >
+
+
+        <p>
+
+          Water Filtration Skid
+
+        </p>
+
+
+        <script>
+
+          window.onload =
+            () => window.print();
+
+        </script>
+
+
+      </body>
+
+      </html>
+
+      `
+
+    );
+
+
+    printWindow.document.close();
+
+  }
+
+
+  /*
+   ==========================================
+   SECURITY HELPERS
+   ==========================================
+  */
+
+  function escapeHtml(value) {
+
+    return String(value || "")
+
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+
+      .replace(
+        /</g,
+        "&lt;"
+      )
+
+      .replace(
+        />/g,
+        "&gt;"
+      )
+
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+
+      .replace(
+        /'/g,
+        "&#039;"
+      );
+
+  }
+
+
+  function escapeAttribute(value) {
+
+    return String(value || "")
+
+      .replace(
+        /'/g,
+        "\\'"
+      );
+
+  }
+
+
+  /*
+   ==========================================
+   START APPLICATION
+   ==========================================
+  */
+
+  checkSession();
+
+</script>
+
+</body>
+</html>
