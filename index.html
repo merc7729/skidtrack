@@ -56,12 +56,31 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    <br><br><button class="success">Sign In</button>
   </form>
   <p style="text-align:center;margin:14px 0 0">
-   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button>
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="showSignup()">Create Account</button>
   </p>
   <div id="loginMessage" class="status"></div>
  </div>
 </div>
 
+<div id="signupScreen" class="hidden"><div class="login"><div class="logo">💧</div><h1>Create Account</h1>
+<p class="muted" style="text-align:center">Create your SkidTrack employee account</p>
+<form id="signupForm">
+<label>Full Name</label><input id="signupName" required autocomplete="name">
+<label>Username</label><input id="signupUsername" required autocomplete="username">
+<label>Email</label><input id="signupEmail" type="email" required autocomplete="email">
+<label>Password</label><input id="signupPassword" type="password" required minlength="6" autocomplete="new-password">
+<label>Confirm Password</label><input id="signupPasswordConfirm" type="password" required minlength="6" autocomplete="new-password">
+<br><br><button class="success">Create Account</button>
+<button type="button" class="secondary" onclick="showLogin()">Back to Login</button>
+</form><div id="signupMessage" class="status"></div></div></div>
+
+<div id="resetScreen" class="hidden"><div class="login"><div class="logo">🔐</div><h1>Reset Password</h1>
+<p class="muted" style="text-align:center">Choose a new password.</p>
+<form id="resetForm">
+<label>New Password</label><input id="resetPassword" type="password" required minlength="6" autocomplete="new-password">
+<label>Confirm New Password</label><input id="resetPasswordConfirm" type="password" required minlength="6" autocomplete="new-password">
+<br><br><button class="success">Update Password</button>
+</form><div id="resetMessage" class="status"></div></div></div>
 <div id="appScreen" class="hidden">
 <header>
  <h1>💧 SkidTrack</h1>
@@ -189,13 +208,24 @@ function setTimerStatus(msg,type=""){setStatus("timerMessage",msg,type)}
 
 document.addEventListener("DOMContentLoaded",()=>{
  $("loginForm").onsubmit=login;
+ $("signupForm").onsubmit=signup;
+ $("resetForm").onsubmit=resetPassword;
  $("workForm").onsubmit=saveWork;
  $("skidForm").onsubmit=addSkid;
  checkSession();
 });
-
+function hideAuthScreens(){$("loginScreen").classList.add("hidden");$("signupScreen").classList.add("hidden");$("resetScreen").classList.add("hidden")}
+function showLogin(){hideAuthScreens();$("appScreen").classList.add("hidden");$("loginScreen").classList.remove("hidden")}
+function showSignup(){hideAuthScreens();$("signupScreen").classList.remove("hidden")}
 async function checkSession(){
- const {data:{session}}=await sb.auth.getSession();
+ const hash=new URLSearchParams(location.hash.replace(/^#/,""));
+ const query=new URLSearchParams(location.search);
+ if(hash.get("type")==="recovery"||query.get("type")==="recovery"){
+  hideAuthScreens();$("appScreen").classList.add("hidden");$("resetScreen").classList.remove("hidden");return;
+ }
+ const{data:{session}}=await sb.auth.getSession();
+ if(session){currentUser=session.user;openApplication()}else showLogin();
+}}=await sb.auth.getSession();
  if(session){currentUser=session.user;openApplication()}
 }
 
@@ -287,10 +317,33 @@ async function forgotPassword(){
  );
 }
 
-async function logout(){
- await stopScanner();clearTimer();
- await sb.auth.signOut();$("appScreen").classList.add("hidden");$("loginScreen").classList.remove("hidden");
+async function signup(e){
+ e.preventDefault();
+ const fullName=$("signupName").value.trim();
+ const username=$("signupUsername").value.trim().toLowerCase();
+ const email=$("signupEmail").value.trim();
+ const password=$("signupPassword").value;
+ if(!/^[a-z0-9._-]{3,40}$/i.test(username))return setStatus("signupMessage","Username must be 3-40 characters and use letters, numbers, dots, underscores, or hyphens.","error");
+ if(password!==$("signupPasswordConfirm").value)return setStatus("signupMessage","Passwords do not match.","error");
+ setStatus("signupMessage","Creating account...");
+ const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname,data:{full_name:fullName,username}}});
+ if(error)return setStatus("signupMessage",error.message,"error");
+ if(data.user&&!data.session)return setStatus("signupMessage","Account created. Check your email to confirm your account.","success");
+ setStatus("signupMessage","Account created successfully.","success");
+ if(data.session){currentUser=data.user;await openApplication()}
 }
+async function resetPassword(e){
+ e.preventDefault();
+ const password=$("resetPassword").value;
+ if(password!==$("resetPasswordConfirm").value)return setStatus("resetMessage","Passwords do not match.","error");
+ setStatus("resetMessage","Updating password...");
+ const {error}=await sb.auth.updateUser({password});
+ if(error)return setStatus("resetMessage",error.message,"error");
+ history.replaceState({},document.title,location.pathname);
+ setStatus("resetMessage","Password updated successfully. You can now sign in.","success");
+ setTimeout(showLogin,1200);
+}
+async function logout(){await stopScanner();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
 
 async function loadProfile(){
  const {data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
