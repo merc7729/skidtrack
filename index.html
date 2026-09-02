@@ -234,45 +234,60 @@ async function deleteSkid(id) {
     return;
   }
 
-  const confirmed = confirm(
-    `Delete skid ${s.skid_number}?\n\n` +
-    `This will also delete its associated work records.`
-  );
-
-  if (!confirmed) return;
+  if (!confirm(`Are you sure you want to delete skid ${s.skid_number}?`)) {
+    return;
+  }
 
   try {
-    // Delete work records associated with this skid first
+    // Delete related work records first
     const { error: workError } = await sb
       .from("work_records")
       .delete()
       .eq("skid_id", id);
 
     if (workError) {
-      console.error("Work record delete error:", workError);
-      alert("Could not delete work records:\n\n" + workError.message);
+      console.error(workError);
+      alert("Error deleting work records:\n" + workError.message);
       return;
     }
 
-    // Delete the skid
-    const { error: skidError } = await sb
+    // Delete skid and require Supabase to return the deleted row
+    const { data, error } = await sb
       .from("skids")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select();
 
-    if (skidError) {
-      console.error("Skid delete error:", skidError);
-      alert("Could not delete skid:\n\n" + skidError.message);
+    if (error) {
+      console.error(error);
+      alert("Error deleting skid:\n" + error.message);
       return;
     }
+
+    // IMPORTANT: Check that a row was actually deleted
+    if (!data || data.length === 0) {
+      alert(
+        "The skid was not deleted.\n\n" +
+        "This is likely a Supabase Row Level Security (RLS) policy issue."
+      );
+      return;
+    }
+
+    // Immediately remove from the app
+    allSkids = allSkids.filter(x => x.id !== id);
+
+    renderSkids();
+    renderDashboard();
+    populateFilters();
 
     alert(`Skid ${s.skid_number} deleted successfully.`);
 
+    // Reload from Supabase to verify
     await refreshAllData();
 
-  } catch (error) {
-    console.error("Unexpected delete error:", error);
-    alert("Unexpected error:\n\n" + error.message);
+  } catch (err) {
+    console.error("Delete error:", err);
+    alert("Unexpected error:\n" + err.message);
   }
 }
 
