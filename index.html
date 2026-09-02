@@ -190,6 +190,77 @@ const fmt=d=>d?new Date(d).toLocaleString():"";
 const admin=()=>currentProfile?.role==="admin";
 
 function setStatus(id,msg,type=""){const e=$(id);e.textContent=msg;e.className="status "+type}
+let workStartTime = null;
+let workStopTime = null;
+
+function toLocalDateTimeInput(date) {
+  const pad = n => String(n).padStart(2, "0");
+
+  return (
+    date.getFullYear() + "-" +
+    pad(date.getMonth() + 1) + "-" +
+    pad(date.getDate()) + "T" +
+    pad(date.getHours()) + ":" +
+    pad(date.getMinutes())
+  );
+}
+
+function startWorkTimer() {
+
+  if (workStartTime) {
+    alert("Work timer is already running.");
+    return;
+  }
+
+  workStartTime = new Date();
+  workStopTime = null;
+
+  $("startTime").value = toLocalDateTimeInput(workStartTime);
+  $("stopTime").value = "";
+  $("timeSpent").value = "";
+
+  $("startWorkBtn").disabled = true;
+  $("stopWorkBtn").disabled = false;
+
+  $("timerStatus").textContent =
+    "🟢 Work started at " +
+    workStartTime.toLocaleTimeString();
+
+  $("timerStatus").className = "status success";
+}
+
+function stopWorkTimer() {
+
+  if (!workStartTime) {
+    alert("Start work first.");
+    return;
+  }
+
+  workStopTime = new Date();
+
+  $("stopTime").value = toLocalDateTimeInput(workStopTime);
+
+  const milliseconds =
+    workStopTime.getTime() -
+    workStartTime.getTime();
+
+  const hours =
+    milliseconds / (1000 * 60 * 60);
+
+  $("timeSpent").value =
+    hours.toFixed(2);
+
+  $("startWorkBtn").disabled = false;
+  $("stopWorkBtn").disabled = true;
+
+  $("timerStatus").textContent =
+    "🔴 Work stopped. Total: " +
+    hours.toFixed(2) +
+    " hours.";
+
+  $("timerStatus").className = "status success";
+}
+  
 
 document.addEventListener("DOMContentLoaded",()=>{
   $("loginForm").onsubmit=login;
