@@ -226,9 +226,55 @@ async function addSkid(e){
  if(error)return setStatus("skidMessage",error.message,"error");
  e.target.reset();setStatus("skidMessage","Skid added.","success");refreshAllData();
 }
-async function deleteSkid(id){if(confirm("Delete this skid?")){const{error}=await sb.from("skids").delete().eq("id",id);if(error)alert(error.message);else refreshAllData()}}
-function editSkid(id){const s=allSkids.find(x=>x.id===id);openModal(`<h2>Edit Skid</h2><label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}"><label>Location</label><input id="mLoc" value="${esc(s.location)}"><label>System Type</label><input id="mSys" value="${esc(s.system_type)}"><label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select><br><br><button class="success" onclick="saveSkidEdit('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);$("mStatus").value=s.status}
-async function saveSkidEdit(id){const{error}=await sb.from("skids").update({skid_number:$("mNum").value.trim(),location:$("mLoc").value.trim(),system_type:$("mSys").value.trim(),status:$("mStatus").value}).eq("id",id);if(error)return alert(error.message);closeModal();refreshAllData()}
+async function deleteSkid(id) {
+  const s = allSkids.find(x => x.id === id);
+
+  if (!s) {
+    alert("Skid not found.");
+    return;
+  }
+
+  const confirmed = confirm(
+    `Delete skid ${s.skid_number}?\n\n` +
+    `This will also delete its associated work records.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    // Delete work records associated with this skid first
+    const { error: workError } = await sb
+      .from("work_records")
+      .delete()
+      .eq("skid_id", id);
+
+    if (workError) {
+      console.error("Work record delete error:", workError);
+      alert("Could not delete work records:\n\n" + workError.message);
+      return;
+    }
+
+    // Delete the skid
+    const { error: skidError } = await sb
+      .from("skids")
+      .delete()
+      .eq("id", id);
+
+    if (skidError) {
+      console.error("Skid delete error:", skidError);
+      alert("Could not delete skid:\n\n" + skidError.message);
+      return;
+    }
+
+    alert(`Skid ${s.skid_number} deleted successfully.`);
+
+    await refreshAllData();
+
+  } catch (error) {
+    console.error("Unexpected delete error:", error);
+    alert("Unexpected error:\n\n" + error.message);
+  }
+}
 
 async function saveWork(e){
  e.preventDefault();setStatus("workMessage","Saving...");
