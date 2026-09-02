@@ -308,11 +308,32 @@ async function loadSkids(){
  if(error)console.error(error);
  allSkids=data||[];
  $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
-}
+async function loadWorkRecords() 
+{
 
-async function loadWorkRecords(){
- const{data,error}=await sb.from("work_records").select("id,technician_id,work_performed,time_spent,notes,performed_at,skids(id,skid_number),profiles(full_name)").order("performed_at",{ascending:false});
- if(error)console.error(error);allWorkRecords=data||[];
+  const { data, error } = await sb
+    .from("work_records")
+    .select(`
+      id,
+      technician_id,
+      work_performed,
+      time_spent,
+      notes,
+      performed_at,
+      start_time,
+      stop_time,
+      skids(id,skid_number),
+      profiles(full_name)
+    `)
+    .order("performed_at", {
+      ascending: false
+    });
+
+  if (error) {
+    console.error(error);
+  }
+
+  allWorkRecords = data || [];
 }
 
 async function loadProfiles(){
