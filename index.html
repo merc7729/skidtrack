@@ -395,11 +395,66 @@ async function deleteSkid(id) {
   }
 }
 
-async function saveWork(e){
- e.preventDefault();setStatus("workMessage","Saving...");
- const{error}=await sb.from("work_records").insert({skid_id:$("workSkid").value,technician_id:currentUser.id,work_performed:$("workPerformed").value.trim(),time_spent:Number($("timeSpent").value),notes:$("workNotes").value.trim()});
- if(error)return setStatus("workMessage",error.message,"error");
- e.target.reset();setStatus("workMessage","✓ Work record saved.","success");refreshAllData();
+async function saveWork(e) {
+
+  e.preventDefault();
+
+  if (!workStartTime) {
+    alert("Please click Start Work before saving.");
+    return;
+  }
+
+  if (!workStopTime) {
+    alert("Please click Stop Work before saving.");
+    return;
+  }
+
+  setStatus("workMessage", "Saving...");
+
+  const { error } = await sb
+    .from("work_records")
+    .insert({
+      skid_id: $("workSkid").value,
+      technician_id: currentUser.id,
+      work_performed: $("workPerformed").value.trim(),
+      time_spent: Number($("timeSpent").value),
+      notes: $("workNotes").value.trim(),
+
+      start_time: workStartTime.toISOString(),
+      stop_time: workStopTime.toISOString()
+    });
+
+  if (error) {
+    console.error(error);
+    setStatus(
+      "workMessage",
+      error.message,
+      "error"
+    );
+    return;
+  }
+
+  e.target.reset();
+
+  workStartTime = null;
+  workStopTime = null;
+
+  $("startWorkBtn").disabled = false;
+  $("stopWorkBtn").disabled = true;
+
+  $("timerStatus").textContent =
+    "Work timer not started.";
+
+  $("timerStatus").className =
+    "muted";
+
+  setStatus(
+    "workMessage",
+    "✓ Work record saved.",
+    "success"
+  );
+
+  await refreshAllData();
 }
 
 function renderHistory(){
