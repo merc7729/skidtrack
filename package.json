@@ -1,0 +1,23 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "Production-oriented static web app using Supabase for employee authentication and a shared PostgreSQL database. Deploy to Vercel, Netlify, Cloudflare Pages, or any HTTPS static host.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/merc7729/skidtrack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/merc7729/skidtrack/issues"
+  },
+  "homepage": "https://github.com/merc7729/skidtrack#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  }
+}
