@@ -96,7 +96,40 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 <form id="workForm">
 <label>Skid</label><select id="workSkid" required></select>
 <label>Work Performed</label><textarea id="workPerformed" required></textarea>
-<label>Hours</label><input id="timeSpent" type="number" min=".01" step=".25" required>
+<label>Work Timer</label>
+
+<div class="row">
+  <div>
+    <button type="button" id="startWorkBtn" class="success" onclick="startWorkTimer()">
+      ▶ Start Work
+    </button>
+  </div>
+
+  <div>
+    <button type="button" id="stopWorkBtn" class="warning" onclick="stopWorkTimer()" disabled>
+      ■ Stop Work
+    </button>
+  </div>
+</div>
+
+<p id="timerStatus" class="muted">
+  Work timer not started.
+</p>
+
+<div class="row">
+  <div>
+    <label>Start Time</label>
+    <input id="startTime" type="datetime-local" readonly>
+  </div>
+
+  <div>
+    <label>Stop Time</label>
+    <input id="stopTime" type="datetime-local" readonly>
+  </div>
+</div>
+
+<label>Total Hours</label>
+<input id="timeSpent" type="number" min=".01" step=".01" required readonly>
 <label>Notes</label><textarea id="workNotes"></textarea><br>
 <button class="success">Save Work Record</button>
 </form><div id="workMessage" class="status"></div>
