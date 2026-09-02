@@ -1,61 +1,324 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SkidTrack</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://unpkg.com/html5-qrcode"></script><script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkidTrack</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
-:root{--n:#0b4f6c;--b:#1677b8;--g:#15803d;--r:#b91c1c;--o:#b45309;--bg:#f3f7fa;--m:#64748b}*{box-sizing:border-box}body{margin:0;font-family:Arial;background:var(--bg);color:#17212b}button,input,textarea,select{font:inherit}button{border:0;border-radius:8px;padding:10px 14px;background:var(--b);color:white;font-weight:bold;cursor:pointer}.secondary{background:#64748b}.success{background:var(--g)}.warning{background:var(--o)}.danger{background:var(--r)}.small{padding:6px 9px;font-size:12px}.hidden{display:none!important}header{background:var(--n);color:white;padding:14px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}header h1{margin:0;font-size:22px}.role{background:#dbeafe;color:#1e3a8a;padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}.container{max-width:1450px;margin:auto;padding:20px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}nav button.active{background:var(--n)}.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:15px}.card{background:white;padding:18px;border-radius:13px;box-shadow:0 2px 12px #0001}.stat{font-size:34px;font-weight:bold;color:var(--b)}.muted{color:var(--m)}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}h2,h3{margin-top:0}label{display:block;font-weight:bold;margin-top:10px}input,textarea,select{width:100%;margin-top:5px;padding:10px;border:1px solid #dbe3ea;border-radius:8px}textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:170px}.status{min-height:20px;margin-top:8px}.error{color:var(--r)}.status.success{color:var(--g);background:none}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e7edf2;text-align:left}th{background:#eef5f8}.badge{padding:4px 8px;border-radius:99px;font-size:12px;font-weight:bold}.badge.active{background:#dcfce7;color:#166534}.badge.maintenance{background:#fef3c7;color:#92400e}.badge.out_of_service{background:#fee2e2;color:#991b1b}.empty{text-align:center;color:var(--m);padding:24px}.login{max-width:430px;margin:70px auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 35px #0002}.login h1,.login .logo{text-align:center;color:var(--n)}.login .logo{font-size:52px}.modal-bg{position:fixed;inset:0;background:#0008;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modal{background:white;width:min(650px,100%);max-height:90vh;overflow:auto;border-radius:14px;padding:20px}.qrbox{text-align:center}.qrbox canvas{display:block;margin:15px auto;max-width:100%;height:auto}#reader{max-width:500px;width:100%}@media(max-width:700px){.container{padding:12px}.two{grid-template-columns:1fr}th,td{font-size:12px;padding:8px}}
-</style></head><body>
-<div id="loginScreen"><div class="login"><div class="logo">💧</div><h1>SkidTrack</h1><p class="muted" style="text-align:center">Water Filtration Service Management</p><form id="loginForm"><label>Email</label><input id="loginEmail" type="email" required><label>Password</label><input id="loginPassword" type="password" required><br><br><button class="success">Sign In</button></form><div id="loginMessage" class="status"></div></div></div>
-<div id="appScreen" class="hidden"><header><h1>💧 SkidTrack</h1><div><span id="employeeName"></span> <span id="employeeRole" class="role"></span> <button class="secondary" onclick="logout()">Logout</button></div></header><div class="container">
-<nav><button id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</button><button id="nav-work" onclick="showPage('work')">Log Work</button><button id="nav-skids" onclick="showPage('skids')">Skids</button><button id="nav-history" onclick="showPage('history')">Work History</button><button id="nav-employees" class="admin-only hidden" onclick="showPage('employees')">Employees</button><button id="nav-reports" class="admin-only hidden" onclick="showPage('reports')">Reports</button></nav>
-<section id="dashboard" class="page active"><div class="top"><div><h2>Dashboard</h2><span class="muted">Water filtration service overview</span></div><button class="success" onclick="showPage('work')">+ Log Work</button></div><br><div class="grid"><div class="card"><h3>Total Skids</h3><div id="totalSkids" class="stat">0</div></div><div class="card"><h3>Work Records</h3><div id="totalWork" class="stat">0</div></div><div class="card"><h3>Total Labor Hours</h3><div id="totalHours" class="stat">0.00</div></div><div class="card"><h3>Employees</h3><div id="totalEmployees" class="stat">0</div></div></div><br><div class="card"><h3>Recent Service Activity</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="recentActivity"></tbody></table></div></div></section>
-<section id="work" class="page"><h2>Log Work</h2><div class="two"><div class="card"><h3>📷 Scan Skid QR Code</h3><div id="reader"></div><br><button onclick="startScanner()">Start Scanner</button> <button class="secondary" onclick="stopScanner()">Stop Scanner</button></div><div class="card"><h3>🔧 Service Record</h3><form id="workForm"><label>Skid</label><select id="workSkid" required></select><label>Work Performed</label><textarea id="workPerformed" required></textarea><label>Hours</label><input id="timeSpent" type="number" min=".01" step=".25" required><label>Notes</label><textarea id="workNotes"></textarea><br><button class="success">Save Work Record</button></form><div id="workMessage" class="status"></div></div></div></section>
-<section id="skids" class="page"><h2>Filtration Skids</h2><div id="addSkidCard" class="card admin-only hidden"><h3>+ Add New Skid</h3><form id="skidForm"><div class="grid"><div><label>Skid Number</label><input id="skidNumber" required></div><div><label>Location</label><input id="skidLocation"></div><div><label>System Type</label><input id="systemType"></div><div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div></div><br><button class="success">Add Skid</button></form><div id="skidMessage" class="status"></div></div><br><div class="card"><div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div><br><div class="table-wrap"><table><thead><tr><th>Skid</th><th>Location</th><th>System</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div></div></section>
-<section id="history" class="page"><div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div><div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div></section>
+:root{--n:#0b4f6c;--b:#1677b8;--g:#15803d;--r:#b91c1c;--o:#b45309;--bg:#f3f7fa;--m:#64748b}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#17212b}
+button,input,textarea,select{font:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--b);color:#fff;font-weight:bold;cursor:pointer}
+.secondary{background:#64748b}.success{background:var(--g)}.warning{background:var(--o)}.danger{background:var(--r)}
+.small{padding:6px 9px;font-size:12px}.hidden{display:none!important}
+header{background:var(--n);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{margin:0;font-size:22px}.role{background:#dbeafe;color:#1e3a8a;padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}
+.container{max-width:1450px;margin:auto;padding:20px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+nav button.active{background:var(--n)}.page{display:none}.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:15px}
+.card{background:#fff;padding:18px;border-radius:13px;box-shadow:0 2px 12px #0001}
+.stat{font-size:34px;font-weight:bold;color:var(--b)}.muted{color:var(--m)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h2,h3{margin-top:0}label{display:block;font-weight:bold;margin-top:10px}
+input,textarea,select{width:100%;margin-top:5px;padding:10px;border:1px solid #dbe3ea;border-radius:8px}
+textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:170px}
+.status{min-height:20px;margin-top:8px}.error{color:var(--r)}.status.success{color:var(--g);background:none}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e7edf2;text-align:left}th{background:#eef5f8}
+.badge{padding:4px 8px;border-radius:99px;font-size:12px;font-weight:bold}.badge.active{background:#dcfce7;color:#166534}.badge.maintenance{background:#fef3c7;color:#92400e}.badge.out_of_service{background:#fee2e2;color:#991b1b}
+.empty{text-align:center;color:var(--m);padding:24px}.login{max-width:430px;margin:70px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 10px 35px #0002}
+.login h1,.login .logo{text-align:center;color:var(--n)}.login .logo{font-size:52px}
+.modal-bg{position:fixed;inset:0;background:#0008;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;width:min(650px,100%);max-height:90vh;overflow:auto;border-radius:14px;padding:20px}
+.qrbox{text-align:center}.qrbox #qrCodeContainer{display:flex;justify-content:center;align-items:center;margin:15px auto;min-height:80px}
+.qrbox #qrCodeContainer img,.qrbox #qrCodeContainer canvas{max-width:100%;height:auto}
+#reader{max-width:500px;width:100%}
+@media(max-width:700px){.container{padding:12px}.two{grid-template-columns:1fr}th,td{font-size:12px;padding:8px}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login">
+    <div class="logo">💧</div>
+    <h1>SkidTrack</h1>
+    <p class="muted" style="text-align:center">Water Filtration Service Management</p>
+    <form id="loginForm">
+      <label>Email</label><input id="loginEmail" type="email" required>
+      <label>Password</label><input id="loginPassword" type="password" required>
+      <br><br><button class="success">Sign In</button>
+    </form>
+    <div id="loginMessage" class="status"></div>
+  </div>
+</div>
+
+<div id="appScreen" class="hidden">
+<header>
+  <h1>💧 SkidTrack</h1>
+  <div><span id="employeeName"></span> <span id="employeeRole" class="role"></span>
+  <button class="secondary" onclick="logout()">Logout</button></div>
+</header>
+
+<div class="container">
+<nav>
+<button id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</button>
+<button id="nav-work" onclick="showPage('work')">Log Work</button>
+<button id="nav-skids" onclick="showPage('skids')">Skids</button>
+<button id="nav-history" onclick="showPage('history')">Work History</button>
+<button id="nav-employees" class="admin-only hidden" onclick="showPage('employees')">Employees</button>
+<button id="nav-reports" class="admin-only hidden" onclick="showPage('reports')">Reports</button>
+</nav>
+
+<section id="dashboard" class="page active">
+<div class="top"><div><h2>Dashboard</h2><span class="muted">Water filtration service overview</span></div><button class="success" onclick="showPage('work')">+ Log Work</button></div>
+<br>
+<div class="grid">
+<div class="card"><h3>Total Skids</h3><div id="totalSkids" class="stat">0</div></div>
+<div class="card"><h3>Work Records</h3><div id="totalWork" class="stat">0</div></div>
+<div class="card"><h3>Total Labor Hours</h3><div id="totalHours" class="stat">0.00</div></div>
+<div class="card"><h3>Employees</h3><div id="totalEmployees" class="stat">0</div></div>
+</div>
+<br>
+<div class="card"><h3>Recent Service Activity</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="recentActivity"></tbody></table></div></div>
+</section>
+
+<section id="work" class="page">
+<h2>Log Work</h2>
+<div class="two">
+<div class="card"><h3>📷 Scan Skid QR Code</h3><div id="reader"></div><br><button onclick="startScanner()">Start Scanner</button> <button class="secondary" onclick="stopScanner()">Stop Scanner</button></div>
+<div class="card"><h3>🔧 Service Record</h3>
+<form id="workForm">
+<label>Skid</label><select id="workSkid" required></select>
+<label>Work Performed</label><textarea id="workPerformed" required></textarea>
+<label>Hours</label><input id="timeSpent" type="number" min=".01" step=".25" required>
+<label>Notes</label><textarea id="workNotes"></textarea><br>
+<button class="success">Save Work Record</button>
+</form><div id="workMessage" class="status"></div>
+</div></div>
+</section>
+
+<section id="skids" class="page">
+<h2>Filtration Skids</h2>
+<div id="addSkidCard" class="card admin-only hidden">
+<h3>+ Add New Skid</h3>
+<form id="skidForm"><div class="grid">
+<div><label>Skid Number</label><input id="skidNumber" required></div>
+<div><label>Location</label><input id="skidLocation"></div>
+<div><label>System Type</label><input id="systemType"></div>
+<div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
+</div><br><button class="success">Add Skid</button></form><div id="skidMessage" class="status"></div>
+</div>
+<br>
+<div class="card">
+<div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
+<br><div class="table-wrap"><table><thead><tr><th>Skid</th><th>Location</th><th>System</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div>
+</div>
+</section>
+
+<section id="history" class="page">
+<div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div>
+<div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
+</section>
+
 <section id="employees" class="page"><h2>Employees</h2><div class="card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>ID</th><th>Role</th><th>Active</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
-<section id="reports" class="page"><div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div><div class="card"><div class="row"><div><label>From</label><input id="reportFrom" type="date" onchange="renderReports()"></div><div><label>To</label><input id="reportTo" type="date" onchange="renderReports()"></div><div><label>Employee</label><select id="reportEmployee" onchange="renderReports()"></select></div><div><label>Skid</label><select id="reportSkid" onchange="renderReports()"></select></div></div><br><div class="grid"><div class="card"><h3>Filtered Hours</h3><div id="reportHours" class="stat">0.00</div></div><div class="card"><h3>Filtered Records</h3><div id="reportCount" class="stat">0</div></div></div><br><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="reportTable"></tbody></table></div></div></section>
-</div></div><div id="modalBg" class="modal-bg hidden"><div id="modalContent" class="modal"></div></div>
+
+<section id="reports" class="page">
+<div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div>
+<div class="card"><div class="row">
+<div><label>From</label><input id="reportFrom" type="date" onchange="renderReports()"></div>
+<div><label>To</label><input id="reportTo" type="date" onchange="renderReports()"></div>
+<div><label>Employee</label><select id="reportEmployee" onchange="renderReports()"></select></div>
+<div><label>Skid</label><select id="reportSkid" onchange="renderReports()"></select></div>
+</div><br>
+<div class="grid"><div class="card"><h3>Filtered Hours</h3><div id="reportHours" class="stat">0.00</div></div><div class="card"><h3>Filtered Records</h3><div id="reportCount" class="stat">0</div></div></div>
+<br><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="reportTable"></tbody></table></div>
+</div>
+</section>
+</div>
+</div>
+
+<div id="modalBg" class="modal-bg hidden"><div id="modalContent" class="modal"></div></div>
+
 <script>
-const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co",SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ",sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[],html5QrCode=null;
-const $=x=>document.getElementById(x),esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])),fmt=d=>d?new Date(d).toLocaleString():"",admin=()=>currentProfile?.role==="admin";
+const $=x=>document.getElementById(x);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const fmt=d=>d?new Date(d).toLocaleString():"";
+const admin=()=>currentProfile?.role==="admin";
+
 function setStatus(id,msg,type=""){const e=$(id);e.textContent=msg;e.className="status "+type}
-document.addEventListener("DOMContentLoaded",()=>{$("loginForm").onsubmit=login;$("workForm").onsubmit=saveWork;$("skidForm").onsubmit=addSkid;checkSession()});
+
+document.addEventListener("DOMContentLoaded",()=>{
+  $("loginForm").onsubmit=login;
+  $("workForm").onsubmit=saveWork;
+  $("skidForm").onsubmit=addSkid;
+  checkSession();
+});
+
 async function checkSession(){const{data:{session}}=await sb.auth.getSession();if(session){currentUser=session.user;openApplication()}}
 async function login(e){e.preventDefault();setStatus("loginMessage","Signing in...");const{data,error}=await sb.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(error)return setStatus("loginMessage",error.message,"error");currentUser=data.user;openApplication()}
 async function logout(){await stopScanner();await sb.auth.signOut();$("appScreen").classList.add("hidden");$("loginScreen").classList.remove("hidden")}
-async function loadProfile(){const{data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();if(error)console.error(error);currentProfile=data||{full_name:currentUser.email,role:"technician"};$("employeeName").textContent=currentProfile.full_name||currentUser.email;$("employeeRole").textContent=currentProfile.role||"technician";document.querySelectorAll(".admin-only").forEach(x=>x.classList.toggle("hidden",!admin()))}
+
+async function loadProfile(){
+ const{data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
+ if(error)console.error(error);
+ currentProfile=data||{full_name:currentUser.email,role:"technician"};
+ $("employeeName").textContent=currentProfile.full_name||currentUser.email;
+ $("employeeRole").textContent=currentProfile.role||"technician";
+ document.querySelectorAll(".admin-only").forEach(x=>x.classList.toggle("hidden",!admin()));
+}
+
 async function openApplication(){await loadProfile();$("loginScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");await refreshAllData();openSkidFromUrl()}
 async function refreshAllData(){await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles()]);renderDashboard();populateFilters();renderSkids();renderHistory();renderEmployees();renderReports()}
-function showPage(id){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));const b=$("nav-"+id);if(b)b.classList.add("active");if(id!=="work")stopScanner()}
-async function loadSkids(){const{data,error}=await sb.from("skids").select("*").order("skid_number");if(error)console.error(error);allSkids=data||[];$("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("")}
-async function loadWorkRecords(){const{data,error}=await sb.from("work_records").select("id,technician_id,work_performed,time_spent,notes,performed_at,skids(id,skid_number),profiles(full_name)").order("performed_at",{ascending:false});if(error)console.error(error);allWorkRecords=data||[]}
-async function loadProfiles(){if(!admin()){allProfiles=[];return}const{data,error}=await sb.from("profiles").select("*").order("full_name");if(error)console.error(error);allProfiles=data||[]}
-function renderDashboard(){const h=allWorkRecords.reduce((a,r)=>a+Number(r.time_spent||0),0);$("totalSkids").textContent=allSkids.length;$("totalWork").textContent=allWorkRecords.length;$("totalHours").textContent=h.toFixed(2);$("totalEmployees").textContent=admin()?allProfiles.length:"—";$("recentActivity").innerHTML=allWorkRecords.slice(0,8).map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No work records yet.</td></tr>'}
-function renderSkids(){const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value,rows=allSkids.filter(s=>[s.skid_number,s.location,s.system_type].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));$("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td>${esc(s.location)}</td><td>${esc(s.system_type)}</td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button class="small" onclick="viewSkid('${s.id}')">View</button><button class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button class="small warning" onclick="editSkid('${s.id}')">Edit</button><button class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No skids found.</td></tr>'}
-async function addSkid(e){e.preventDefault();const{error}=await sb.from("skids").insert({skid_number:$("skidNumber").value.trim(),location:$("skidLocation").value.trim(),system_type:$("systemType").value.trim(),status:$("skidStatus").value});if(error)return setStatus("skidMessage",error.message,"error");e.target.reset();setStatus("skidMessage","Skid added.","success");refreshAllData()}
+
+function showPage(id){
+ document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+ $(id).classList.add("active");
+ document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+ const b=$("nav-"+id);if(b)b.classList.add("active");
+ if(id!=="work")stopScanner();
+}
+
+async function loadSkids(){
+ const{data,error}=await sb.from("skids").select("*").order("skid_number");
+ if(error)console.error(error);
+ allSkids=data||[];
+ $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
+}
+
+async function loadWorkRecords(){
+ const{data,error}=await sb.from("work_records").select("id,technician_id,work_performed,time_spent,notes,performed_at,skids(id,skid_number),profiles(full_name)").order("performed_at",{ascending:false});
+ if(error)console.error(error);allWorkRecords=data||[];
+}
+
+async function loadProfiles(){
+ if(!admin()){allProfiles=[];return}
+ const{data,error}=await sb.from("profiles").select("*").order("full_name");
+ if(error)console.error(error);allProfiles=data||[];
+}
+
+function renderDashboard(){
+ const h=allWorkRecords.reduce((a,r)=>a+Number(r.time_spent||0),0);
+ $("totalSkids").textContent=allSkids.length;$("totalWork").textContent=allWorkRecords.length;
+ $("totalHours").textContent=h.toFixed(2);$("totalEmployees").textContent=admin()?allProfiles.length:"—";
+ $("recentActivity").innerHTML=allWorkRecords.slice(0,8).map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No work records yet.</td></tr>';
+}
+
+function renderSkids(){
+ const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
+ const rows=allSkids.filter(s=>[s.skid_number,s.location,s.system_type].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td>${esc(s.location)}</td><td>${esc(s.system_type)}</td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button class="small" onclick="viewSkid('${s.id}')">View</button><button class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button class="small warning" onclick="editSkid('${s.id}')">Edit</button><button class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No skids found.</td></tr>';
+}
+
+async function addSkid(e){
+ e.preventDefault();
+ const{error}=await sb.from("skids").insert({skid_number:$("skidNumber").value.trim(),location:$("skidLocation").value.trim(),system_type:$("systemType").value.trim(),status:$("skidStatus").value});
+ if(error)return setStatus("skidMessage",error.message,"error");
+ e.target.reset();setStatus("skidMessage","Skid added.","success");refreshAllData();
+}
 async function deleteSkid(id){if(confirm("Delete this skid?")){const{error}=await sb.from("skids").delete().eq("id",id);if(error)alert(error.message);else refreshAllData()}}
 function editSkid(id){const s=allSkids.find(x=>x.id===id);openModal(`<h2>Edit Skid</h2><label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}"><label>Location</label><input id="mLoc" value="${esc(s.location)}"><label>System Type</label><input id="mSys" value="${esc(s.system_type)}"><label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select><br><br><button class="success" onclick="saveSkidEdit('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);$("mStatus").value=s.status}
 async function saveSkidEdit(id){const{error}=await sb.from("skids").update({skid_number:$("mNum").value.trim(),location:$("mLoc").value.trim(),system_type:$("mSys").value.trim(),status:$("mStatus").value}).eq("id",id);if(error)return alert(error.message);closeModal();refreshAllData()}
-async function saveWork(e){e.preventDefault();setStatus("workMessage","Saving...");const{error}=await sb.from("work_records").insert({skid_id:$("workSkid").value,technician_id:currentUser.id,work_performed:$("workPerformed").value.trim(),time_spent:Number($("timeSpent").value),notes:$("workNotes").value.trim()});if(error)return setStatus("workMessage",error.message,"error");e.target.reset();setStatus("workMessage","✓ Work record saved.","success");refreshAllData()}
-function renderHistory(){const q=$("historySearch").value.toLowerCase(),rows=allWorkRecords.filter(r=>[r.skids?.skid_number,r.work_performed,r.notes,r.profiles?.full_name].join(" ").toLowerCase().includes(q));$("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button class="small warning" onclick="editWork('${r.id}')">Edit</button> <button class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="7" class="empty">No records found.</td></tr>'}
+
+async function saveWork(e){
+ e.preventDefault();setStatus("workMessage","Saving...");
+ const{error}=await sb.from("work_records").insert({skid_id:$("workSkid").value,technician_id:currentUser.id,work_performed:$("workPerformed").value.trim(),time_spent:Number($("timeSpent").value),notes:$("workNotes").value.trim()});
+ if(error)return setStatus("workMessage",error.message,"error");
+ e.target.reset();setStatus("workMessage","✓ Work record saved.","success");refreshAllData();
+}
+
+function renderHistory(){
+ const q=$("historySearch").value.toLowerCase(),rows=allWorkRecords.filter(r=>[r.skids?.skid_number,r.work_performed,r.notes,r.profiles?.full_name].join(" ").toLowerCase().includes(q));
+ $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button class="small warning" onclick="editWork('${r.id}')">Edit</button> <button class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="7" class="empty">No records found.</td></tr>';
+}
+
 function editWork(id){const r=allWorkRecords.find(x=>x.id===id);openModal(`<h2>Edit Work Record</h2><label>Work Performed</label><textarea id="mWork">${esc(r.work_performed)}</textarea><label>Hours</label><input id="mHours" type="number" step=".25" value="${r.time_spent}"><label>Notes</label><textarea id="mNotes">${esc(r.notes)}</textarea><br><br><button class="success" onclick="saveWorkEdit('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`)}
 async function saveWorkEdit(id){const{error}=await sb.from("work_records").update({work_performed:$("mWork").value.trim(),time_spent:Number($("mHours").value),notes:$("mNotes").value.trim()}).eq("id",id);if(error)return alert(error.message);closeModal();refreshAllData()}
 async function deleteWork(id){if(confirm("Delete this work record?")){const{error}=await sb.from("work_records").delete().eq("id",id);if(error)alert(error.message);else refreshAllData()}}
+
 function renderEmployees(){if(!admin())return;$("employeeTable").innerHTML=allProfiles.map(p=>`<tr><td>${esc(p.full_name)}</td><td>${esc(p.id)}</td><td>${esc(p.role)}</td><td>${p.active===false?"No":"Yes"}</td><td><button class="small warning" onclick="editEmployee('${p.id}')">Edit</button></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No employee profiles.</td></tr>'}
 function editEmployee(id){const p=allProfiles.find(x=>x.id===id);openModal(`<h2>Edit Employee</h2><label>Name</label><input id="mEmpName" value="${esc(p.full_name)}"><label>Role</label><select id="mEmpRole"><option>technician</option><option>manager</option><option>admin</option></select><br><br><button class="success" onclick="saveEmployee('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);$("mEmpRole").value=p.role}
 async function saveEmployee(id){const{error}=await sb.from("profiles").update({full_name:$("mEmpName").value.trim(),role:$("mEmpRole").value}).eq("id",id);if(error)return alert(error.message);closeModal();refreshAllData()}
+
 function populateFilters(){if(!admin())return;$("reportEmployee").innerHTML='<option value="">All Employees</option>'+allProfiles.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join("");$("reportSkid").innerHTML='<option value="">All Skids</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("")}
 function reportRows(){if(!admin())return[];const f=$("reportFrom").value,t=$("reportTo").value,e=$("reportEmployee").value,s=$("reportSkid").value;return allWorkRecords.filter(r=>{const d=(r.performed_at||"").slice(0,10);return(!f||d>=f)&&(!t||d<=t)&&(!e||r.technician_id===e)&&(!s||r.skids?.id===s)})}
 function renderReports(){if(!admin())return;const rows=reportRows(),h=rows.reduce((a,r)=>a+Number(r.time_spent||0),0);$("reportHours").textContent=h.toFixed(2);$("reportCount").textContent=rows.length;$("reportTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>'}
 function exportCSV(){const rows=reportRows(),txt=[["Date","Skid","Work","Hours","Employee","Notes"],...rows.map(r=>[r.performed_at,r.skids?.skid_number,r.work_performed,r.time_spent,r.profiles?.full_name,r.notes])].map(a=>a.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"),u=URL.createObjectURL(new Blob([txt],{type:"text/csv"})),a=document.createElement("a");a.href=u;a.download="skidtrack-report.csv";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+
 function skidUrl(s){return location.origin+location.pathname+"?skid="+encodeURIComponent(s.skid_number)}
-function drawQr(canvasId,text,size){const c=$(canvasId);if(!c)return alert("QR canvas error.");if(typeof QRCode==="undefined")return alert("QR library failed to load. Refresh and try again.");QRCode.toCanvas(c,text,{width:size,margin:2,errorCorrectionLevel:"M"},e=>{if(e){console.error(e);alert("QR generation failed: "+e.message)}})}
-function showQr(id){const s=allSkids.find(x=>x.id===id);if(!s)return;openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><canvas id="qrCanvas"></canvas><p class="muted">${esc(s.location||"")}</p><button onclick="printQrLabel('${s.id}')">Print Label</button> <button class="secondary" onclick="closeModal()">Close</button></div>`);drawQr("qrCanvas",skidUrl(s),280)}
-function viewSkid(id){const s=allSkids.find(x=>x.id===id);if(!s)return;const rs=allWorkRecords.filter(r=>r.skids?.id===id);openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><canvas id="qrCanvas"></canvas></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button class="secondary" onclick="closeModal()">Close</button>`);drawQr("qrCanvas",skidUrl(s),180)}
-function printQrLabel(id){const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");w.document.write(`<!doctype html><title>${esc(s.skid_number)}</title><script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"><\/script><body style="font-family:Arial;text-align:center"><h2>💧 SkidTrack</h2><h1>${esc(s.skid_number)}</h1><canvas id="q"></canvas><script>QRCode.toCanvas(document.getElementById("q"),${JSON.stringify(skidUrl(s))},{width:300,margin:2},function(e){if(!e)setTimeout(function(){print()},300)})<\/script></body>`);w.document.close()}
-function openModal(h){$("modalContent").innerHTML=h;$("modalBg").classList.remove("hidden")}function closeModal(){$("modalBg").classList.add("hidden");$("modalContent").innerHTML=""}
-async function startScanner(){if(html5QrCode)return;html5QrCode=new Html5Qrcode("reader");try{await html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:240}},handleQr)}catch(e){alert("Camera error: "+e.message);html5QrCode=null}}
+
+function drawQr(containerId,text,size){
+ const container=$(containerId);
+ if(!container){alert("QR container was not found.");return}
+ if(typeof QRCode==="undefined"){alert("QR code library failed to load. Check your internet connection and refresh.");console.error("QRCode library is undefined");return}
+ container.innerHTML="";
+ try{
+   new QRCode(container,{text:text,width:size,height:size,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
+ }catch(error){
+   console.error("QR generation error:",error);
+   container.innerHTML="<p style='color:red'>QR generation failed: "+esc(error.message)+"</p>";
+ }
+}
+
+function showQr(id){
+ const s=allSkids.find(x=>x.id===id);if(!s)return;
+ openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><p><b>Water Filtration Skid</b></p><div id="qrCodeContainer"></div><p class="muted">${esc(s.location||"No location")}</p><p style="font-size:12px;word-break:break-all">${esc(skidUrl(s))}</p><br><button onclick="printQrLabel('${s.id}')">Print Label</button> <button class="secondary" onclick="closeModal()">Close</button></div>`);
+ drawQr("qrCodeContainer",skidUrl(s),280);
+}
+
+function viewSkid(id){
+ const s=allSkids.find(x=>x.id===id);if(!s)return;
+ const rs=allWorkRecords.filter(r=>r.skids?.id===id);
+ openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location||"")}</p><p><b>System:</b> ${esc(s.system_type||"")}</p><p><b>Status:</b> ${esc(s.status||"")}</p><div class="qrbox"><h3>Skid QR Code</h3><div id="qrCodeContainer"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button class="secondary" onclick="closeModal()">Close</button>`);
+ drawQr("qrCodeContainer",skidUrl(s),200);
+}
+
+function printQrLabel(id){
+ const s=allSkids.find(x=>x.id===id);if(!s)return;
+ const w=window.open("","_blank");if(!w){alert("Popup blocked. Please allow popups to print.");return}
+ const url=skidUrl(s);
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:30px}#qr{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTrack</h2><h1>${esc(s.skid_number)}</h1><p>Water Filtration System</p><div id="qr"></div><script>window.onload=function(){new QRCode(document.getElementById("qr"),{text:${JSON.stringify(url)},width:300,height:300,correctLevel:QRCode.CorrectLevel.H});setTimeout(function(){window.print()},1000)}<\/script></body></html>`);
+ w.document.close();
+}
+
+function openModal(h){$("modalContent").innerHTML=h;$("modalBg").classList.remove("hidden")}
+function closeModal(){$("modalBg").classList.add("hidden");$("modalContent").innerHTML=""}
+
+async function startScanner(){
+ if(html5QrCode)return;
+ if(typeof Html5Qrcode==="undefined"){alert("QR scanner library failed to load.");return}
+ html5QrCode=new Html5Qrcode("reader");
+ try{await html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:240}},handleQr)}
+ catch(e){alert("Camera error: "+e.message);html5QrCode=null}
+}
 async function stopScanner(){if(!html5QrCode)return;try{await html5QrCode.stop();await html5QrCode.clear()}catch(e){}html5QrCode=null;$("reader").innerHTML=""}
-function handleQr(text){let n="";try{n=new URL(text).searchParams.get("skid")||""}catch(e){n=text.replace(/^SKID:/i,"").trim()}if(!n)n=text.trim();const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());if(!s)return alert("Skid not found: "+n);$("workSkid").value=s.id;setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner()}
-function openSkidFromUrl(){const n=new URLSearchParams(location.search).get("skid");if(n){const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());if(s)viewSkid(s.id)}}
-</script></body></html>
+
+function handleQr(text){
+ let n="";
+ try{n=new URL(text).searchParams.get("skid")||""}
+ catch(e){n=text.replace(/^SKID:/i,"").trim()}
+ if(!n)n=text.trim();
+ const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());
+ if(!s)return alert("Skid not found: "+n);
+ $("workSkid").value=s.id;
+ setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");
+ stopScanner();
+}
+
+function openSkidFromUrl(){
+ const n=new URLSearchParams(location.search).get("skid");
+ if(n){const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());if(s)viewSkid(s.id)}
+}
+</script>
+</body>
+</html>
