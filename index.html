@@ -51,10 +51,13 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <div class="logo">💧</div><h1>SkidTrack</h1>
   <p class="muted" style="text-align:center">Water Filtration Service Management</p>
   <form id="loginForm">
-   <label>Email</label><input id="loginEmail" type="email" required>
-   <label>Password</label><input id="loginPassword" type="password" required>
+   <label>Username</label><input id="loginUsername" type="text" autocomplete="username" required>
+   <label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" required>
    <br><br><button class="success">Sign In</button>
   </form>
+  <p style="text-align:center;margin:14px 0 0">
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button>
+  </p>
   <div id="loginMessage" class="status"></div>
  </div>
 </div>
@@ -197,10 +200,91 @@ async function checkSession(){
 }
 
 async function login(e){
- e.preventDefault();setStatus("loginMessage","Signing in...");
- const {data,error}=await sb.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});
- if(error)return setStatus("loginMessage",error.message,"error");
- currentUser=data.user;openApplication();
+ e.preventDefault();
+ setStatus("loginMessage","Signing in...");
+
+ const username=$("loginUsername").value.trim();
+ const password=$("loginPassword").value;
+
+ if(!username || !password){
+  return setStatus("loginMessage","Enter your username and password.","error");
+ }
+
+ /*
+  Username login uses the Supabase RPC function:
+  public.get_login_email(username text)
+  The function looks up the employee username and returns the
+  matching authentication email.
+ */
+ const {data:loginEmail,error:lookupError}=await sb.rpc(
+  "get_login_email",
+  {p_username:username}
+ );
+
+ if(lookupError){
+  console.error(lookupError);
+  return setStatus(
+   "loginMessage",
+   "Username login is not configured yet. Run the SQL setup provided with this update.",
+   "error"
+  );
+ }
+
+ if(!loginEmail){
+  return setStatus("loginMessage","Invalid username or password.","error");
+ }
+
+ const {data,error}=await sb.auth.signInWithPassword({
+  email:loginEmail,
+  password
+ });
+
+ if(error)return setStatus("loginMessage","Invalid username or password.","error");
+
+ currentUser=data.user;
+ openApplication();
+}
+
+async function forgotPassword(){
+ const username=prompt("Enter your username to reset your password:");
+ if(username===null)return;
+
+ const cleanUsername=username.trim();
+ if(!cleanUsername)return alert("Please enter your username.");
+
+ setStatus("loginMessage","Preparing password reset...");
+
+ const {data:loginEmail,error:lookupError}=await sb.rpc(
+  "get_login_email",
+  {p_username:cleanUsername}
+ );
+
+ // Do not reveal whether the username exists.
+ if(lookupError || !loginEmail){
+  setStatus(
+   "loginMessage",
+   "If the username exists, password reset instructions will be sent.",
+   "success"
+  );
+  return;
+ }
+
+ const redirectTo=location.origin+location.pathname;
+
+ const {error}=await sb.auth.resetPasswordForEmail(loginEmail,{
+  redirectTo
+ });
+
+ if(error){
+  console.error(error);
+  return setStatus("loginMessage",error.message,"error");
+ }
+
+ setStatus(
+  "loginMessage",
+  "If the username exists, password reset instructions have been sent.",
+  "success"
+ );
 }
 
 async function logout(){
@@ -212,7 +296,7 @@ async function loadProfile(){
  const {data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
  if(error)console.error(error);
  currentProfile=data||{full_name:currentUser.email,role:"technician"};
- $("employeeName").textContent=currentProfile.full_name||currentUser.email;
+ $("employeeName").textContent=currentProfile.full_name||currentProfile.username||currentUser.email;
  $("employeeRole").textContent=currentProfile.role||"technician";
  document.querySelectorAll(".admin-only").forEach(x=>x.classList.toggle("hidden",!admin()));
 }
