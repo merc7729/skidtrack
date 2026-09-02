@@ -115,7 +115,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <form id="workForm">
    <div class="grid">
     <div><label>Skid</label><select id="workSkid" required></select></div>
-    <div><label>Hours</label><input id="timeSpent" type="number" min=".01" step=".01" required></div>
+    <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
    <label>Work Performed</label><textarea id="workPerformed" required></textarea>
    <label>Notes</label><textarea id="workNotes"></textarea>
@@ -304,11 +304,23 @@ function startWork(){
 
 function updateTimer(){
  if(!activeStartTime)return;
- const sec=Math.floor((Date.now()-activeStartTime.getTime())/1000);
- const h=String(Math.floor(sec/3600)).padStart(2,"0");
- const m=String(Math.floor((sec%3600)/60)).padStart(2,"0");
- const s=String(sec%60).padStart(2,"0");
+
+ const elapsedMs=Date.now()-activeStartTime.getTime();
+ const totalSeconds=Math.floor(elapsedMs/1000);
+ const totalMinutes=Math.floor(totalSeconds/60);
+ const decimalHours=elapsedMs/3600000;
+
+ const h=String(Math.floor(totalSeconds/3600)).padStart(2,"0");
+ const m=String(Math.floor((totalSeconds%3600)/60)).padStart(2,"0");
+ const s=String(totalSeconds%60).padStart(2,"0");
+
  $("timerDisplay").textContent=`${h}:${m}:${s}`;
+
+ // Automatically update the Hours field while work is running.
+ $("timeSpent").value=decimalHours.toFixed(2);
+
+ // Show total minutes for easier time tracking.
+ $("minutesDisplay").textContent=`${totalMinutes} minute${totalMinutes===1?"":"s"}`;
 }
 
 function clearTimer(){
@@ -317,6 +329,7 @@ function clearTimer(){
  if($("startWorkBtn"))$("startWorkBtn").disabled=false;
  if($("stopWorkBtn"))$("stopWorkBtn").disabled=true;
  if($("timerDisplay"))$("timerDisplay").textContent="00:00:00";
+ if($("minutesDisplay"))$("minutesDisplay").textContent="0 minutes";
  if($("timerStatus"))$("timerStatus").textContent="No active work session.";
 }
 
@@ -324,6 +337,7 @@ function stopWork(){
  if(!activeStartTime)return;
  const stop=new Date(),hours=(stop-activeStartTime)/3600000;
  $("timeSpent").value=hours.toFixed(2);
+ $("minutesDisplay").textContent=`${Math.round(hours*60)} minute${Math.round(hours*60)===1?"":"s"}`;
  $("timerStatus").textContent=`Stopped: ${stop.toLocaleString()}`;
  $("workMessage").textContent=`✓ Work duration calculated: ${hours.toFixed(2)} hours. Complete the form and Save Work Record.`;
  $("workMessage").className="status success";
