@@ -561,8 +561,7 @@ async function addSkid(e){
 
  const single=$("skidNumber").value.trim();
  const bulk=$("bulkSkidNumbers").value
-  .split(/?
-|,/)
+  .split(/\r?\n|,/)
   .map(v=>v.trim())
   .filter(Boolean);
 
