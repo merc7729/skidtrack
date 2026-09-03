@@ -821,7 +821,7 @@ function showAddEmployee(){
    <option value="superviser">Superviser</option>
   </select>
 
-  <p class="muted">Admin accounts cannot be created from the dashboard.</p>
+  <p class="muted">Admin accounts cannot be created from the dashboard. Employee accounts are created securely through the Supabase Edge Function.</p>
   <br>
   <button type="button" class="success" onclick="addEmployee()">Create Employee</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
@@ -859,26 +859,54 @@ async function addEmployee(){
 
  setStatus("addEmployeeMessage","Creating employee...");
 
- const {data,error}=await sb.rpc("admin_create_employee",{
-  p_email:email,
-  p_password:password,
-  p_full_name:fullName,
-  p_username:username,
-  p_role:role
- });
+ const {data,error}=await sb.functions.invoke(
+  "admin-create-employee",
+  {
+   body:{
+    email:email,
+    password:password,
+    full_name:fullName,
+    username:username,
+    role:role
+   }
+  }
+ );
 
  if(error){
   console.error(error);
-  return setStatus("addEmployeeMessage","Could not create employee: "+error.message,"error");
+
+  let message=error.message||"Could not create employee.";
+
+  try{
+   if(error.context){
+    const details=await error.context.json();
+    if(details?.error)message=details.error;
+   }
+  }catch(_){}
+
+  return setStatus(
+   "addEmployeeMessage",
+   message,
+   "error"
+  );
  }
 
- if(!data){
-  return setStatus("addEmployeeMessage","Employee was not created.","error");
+ if(!data?.success){
+  return setStatus(
+   "addEmployeeMessage",
+   data?.error||"Employee was not created.",
+   "error"
+  );
  }
 
  closeModal();
  await refreshAllData();
- alert("Employee created successfully. They can sign in with their username and temporary password.");
+
+ alert(
+  "Employee created successfully.\n\n"+
+  "Username: "+username+
+  "\n\nThey can sign in immediately with their temporary password."
+ );
 }
 
 function editEmployee(id){
