@@ -56,7 +56,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    <br><br><button class="success">Sign In</button>
   </form>
   <p style="text-align:center;margin:14px 0 0">
-   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button>
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button>
   </p>
   <div id="loginMessage" class="status"></div>
  </div>
@@ -323,6 +323,49 @@ async function login(e){
 
  currentUser=data.user;
  await openApplication();
+}
+
+
+async function forgotUsername(){
+ const email=prompt("Enter the email address associated with your account:");
+ if(email===null)return;
+
+ const cleanEmail=email.trim().toLowerCase();
+ if(!cleanEmail){
+  return alert("Please enter your email address.");
+ }
+
+ setStatus("loginMessage","Looking up username...");
+
+ const {data:username,error}=await sb.rpc(
+  "get_username_by_email",
+  {p_email:cleanEmail}
+ );
+
+ if(error){
+  console.error(error);
+  return setStatus(
+   "loginMessage",
+   "Username recovery is not configured yet. Run the get_username_by_email SQL function.",
+   "error"
+  );
+ }
+
+ if(!username){
+  return setStatus(
+   "loginMessage",
+   "No username was found for that email address.",
+   "error"
+  );
+ }
+
+ setStatus(
+  "loginMessage",
+  "Your username is: "+username,
+  "success"
+ );
+
+ $("loginUsername").value=username;
 }
 
 async function forgotPassword(){
