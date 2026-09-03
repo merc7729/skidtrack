@@ -7,7 +7,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 :root{--n:#0b4f6c;--b:#1677b8;--g:#15803d;--r:#b91c1c;--o:#b45309;--bg:#f3f7fa;--m:#64748b}
@@ -38,7 +38,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 .empty{text-align:center;color:var(--m);padding:24px}
 .login{max-width:430px;margin:70px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 10px 35px #0002}.login h1,.login .logo{text-align:center;color:var(--n)}.login .logo{font-size:52px}
 .modal-bg{position:fixed;inset:0;background:#0008;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modal{background:#fff;width:min(700px,100%);max-height:90vh;overflow:auto;border-radius:14px;padding:20px}
-.qrbox{text-align:center}.qrbox canvas{display:block;margin:15px auto;max-width:100%;height:auto}
+.qrbox{text-align:center}.qrbox .qr-container{display:flex;justify-content:center;align-items:center;margin:15px auto;min-height:80px}.qrbox .qr-container img,.qrbox .qr-container canvas{display:block;max-width:100%;height:auto}
 #reader{max-width:500px;width:100%}
 .timer{font-size:24px;font-weight:bold;color:var(--g);margin:12px 0}.timer-card{border:2px solid #dbeafe}
 @media(max-width:700px){.container{padding:12px}.two{grid-template-columns:1fr}th,td{font-size:12px;padding:8px}}
@@ -676,28 +676,43 @@ document.addEventListener("keydown",e=>{
 /* QR */
 function skidUrl(s){return location.origin+location.pathname+"?skid="+encodeURIComponent(s.skid_number)}
 
-function drawQr(canvasId,text,size){
- const c=$(canvasId);if(!c)return alert("QR canvas error.");
- if(typeof QRCode==="undefined")return alert("QR library failed to load.");
- QRCode.toCanvas(c,text,{width:size,margin:2,errorCorrectionLevel:"M"},e=>{if(e){console.error(e);alert("QR generation failed: "+e.message)}});
+function drawQr(containerId,text,size){
+ const c=$(containerId);
+ if(!c)return alert("QR container error.");
+ if(typeof QRCode==="undefined")return alert("QR library failed to load. Refresh the page and try again.");
+ c.innerHTML="";
+ try{
+  new QRCode(c,{
+   text:text,
+   width:size,
+   height:size,
+   colorDark:"#000000",
+   colorLight:"#ffffff",
+   correctLevel:QRCode.CorrectLevel.M
+  });
+ }catch(e){
+  console.error("QR generation failed:",e);
+  alert("QR generation failed: "+e.message);
+ }
 }
 
 function showQr(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
- openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><canvas id="qrCanvas"></canvas><p class="muted">${esc(s.location||"")}</p><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
+ openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><div id="qrCanvas" class="qr-container"></div><p class="muted">${esc(s.location||"")}</p><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),280),50);
 }
 
 function viewSkid(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
- openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><canvas id="qrCanvas"></canvas></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+ openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),180),50);
 }
 
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"><\/script></head><body style="font-family:Arial;text-align:center"><h2>💧 SkidTrack</h2><h1>${esc(s.skid_number)}</h1><canvas id="q"></canvas><script>QRCode.toCanvas(document.getElementById("q"),${JSON.stringify(skidUrl(s))},{width:300,margin:2},function(e){if(!e)setTimeout(function(){window.print()},500)})<\/script></body></html>`);
+ const qrText=JSON.stringify(skidUrl(s));
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTrack</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script></body></html>`);
  w.document.close();
 }
 
