@@ -237,6 +237,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 function hideAuthScreens(){
  $("loginScreen").classList.add("hidden");
+ $("signupScreen").classList.add("hidden");
  $("resetScreen").classList.add("hidden");
 }
 
@@ -244,6 +245,13 @@ function showLogin(){
  hideAuthScreens();
  $("appScreen").classList.add("hidden");
  $("loginScreen").classList.remove("hidden");
+}
+
+function showSignup(){
+ hideAuthScreens();
+ $("appScreen").classList.add("hidden");
+ $("signupScreen").classList.remove("hidden");
+ setStatus("signupMessage","");
 }
 
 async function checkSession(){
