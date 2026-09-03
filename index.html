@@ -388,7 +388,7 @@ function renderDashboard(){
 function renderSkids(){
  const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
  const rows=allSkids.filter(s=>[s.skid_number,s.location,s.system_type].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
- $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td>${esc(s.location)}</td><td>${esc(s.system_type)}</td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button class="small" onclick="viewSkid('${s.id}')">View</button><button class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button class="small warning" onclick="editSkid('${s.id}')">Edit</button><button class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No skids found.</td></tr>';
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td>${esc(s.location)}</td><td>${esc(s.system_type)}</td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No skids found.</td></tr>';
 }
 
 async function addSkid(e){
@@ -399,16 +399,27 @@ async function addSkid(e){
 }
 
 async function deleteSkid(id){
- if(!confirm("Delete this skid?"))return;
- const {error}=await sb.from("skids").delete().eq("id",id);
+ const skid=allSkids.find(s=>s.id===id);
+ if(!skid)return alert("Skid not found.");
+ if(!confirm(`Delete skid ${skid.skid_number}?\n\nThis cannot be undone.`))return;
+
+ const {data,error}=await sb.from("skids").delete().eq("id",id).select("id");
  if(error)return alert("Unable to delete skid: "+error.message);
- allSkids=allSkids.filter(s=>s.id!==id);renderSkids();populateFilters();renderDashboard();
+ if(!data || data.length===0){
+  return alert("The skid was not deleted. Check your Supabase delete/RLS policy.");
+ }
+
+ allSkids=allSkids.filter(s=>s.id!==id);
+ renderSkids();
+ renderDashboard();
+ populateFilters();
  await refreshAllData();
 }
 
 function editSkid(id){
  const s=allSkids.find(x=>x.id===id);
- openModal(`<h2>Edit Skid</h2><label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}"><label>Location</label><input id="mLoc" value="${esc(s.location)}"><label>System Type</label><input id="mSys" value="${esc(s.system_type)}"><label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select><br><br><button class="success" onclick="saveSkidEdit('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);
+ if(!s)return alert("Skid not found.");
+ openModal(`<h2>Edit Skid</h2><label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}"><label>Location</label><input id="mLoc" value="${esc(s.location)}"><label>System Type</label><input id="mSys" value="${esc(s.system_type)}"><label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select><br><br><button type="button" class="success" onclick="saveSkidEdit('${id}')">Save</button> <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
  $("mStatus").value=s.status;
 }
 
@@ -531,7 +542,6 @@ async function stopWork(){
  }
 
  // Success: clear the form and reset the timer.
- e=null;
  $("workForm").reset();
  window.pendingStartTime=null;
  window.pendingStopTime=null;
@@ -573,12 +583,13 @@ async function saveWork(e){
 function renderHistory(){
  const q=$("historySearch").value.toLowerCase();
  const rows=allWorkRecords.filter(r=>[r.skids?.skid_number,r.work_performed,r.notes,r.profiles?.full_name].join(" ").toLowerCase().includes(q));
- $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td><td>${fmt(r.start_time)}</td><td>${fmt(r.stop_time)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button class="small warning" onclick="editWork('${r.id}')">Edit</button> <button class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
+ $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td><td>${fmt(r.start_time)}</td><td>${fmt(r.stop_time)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
 }
 
 function editWork(id){
  const r=allWorkRecords.find(x=>x.id===id);
- openModal(`<h2>Edit Work Record</h2><label>Work Performed</label><textarea id="mWork">${esc(r.work_performed)}</textarea><label>Hours</label><input id="mHours" type="number" step=".01" value="${r.time_spent}"><label>Notes</label><textarea id="mNotes">${esc(r.notes)}</textarea><br><br><button class="success" onclick="saveWorkEdit('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);
+ if(!r)return alert("Work record not found.");
+ openModal(`<h2>Edit Work Record</h2><label>Work Performed</label><textarea id="mWork">${esc(r.work_performed)}</textarea><label>Hours</label><input id="mHours" type="number" step=".01" value="${r.time_spent}"><label>Notes</label><textarea id="mNotes">${esc(r.notes)}</textarea><br><br><button type="button" class="success" onclick="saveWorkEdit('${id}')">Save</button> <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
 }
 
 async function saveWorkEdit(id){
@@ -595,12 +606,13 @@ async function deleteWork(id){
 
 function renderEmployees(){
  if(!admin())return;
- $("employeeTable").innerHTML=allProfiles.map(p=>`<tr><td>${esc(p.full_name)}</td><td>${esc(p.id)}</td><td>${esc(p.role)}</td><td><button class="small warning" onclick="editEmployee('${p.id}')">Edit</button></td></tr>`).join("")||'<tr><td colspan="4" class="empty">No employee profiles.</td></tr>';
+ $("employeeTable").innerHTML=allProfiles.map(p=>`<tr><td>${esc(p.full_name)}</td><td>${esc(p.id)}</td><td>${esc(p.role)}</td><td><button type="button" class="small warning" onclick="editEmployee('${p.id}')">Edit</button></td></tr>`).join("")||'<tr><td colspan="4" class="empty">No employee profiles.</td></tr>';
 }
 
 function editEmployee(id){
  const p=allProfiles.find(x=>x.id===id);
- openModal(`<h2>Edit Employee</h2><label>Name</label><input id="mEmpName" value="${esc(p.full_name)}"><label>Role</label><select id="mEmpRole"><option>technician</option><option>manager</option><option>admin</option></select><br><br><button class="success" onclick="saveEmployee('${id}')">Save</button> <button class="secondary" onclick="closeModal()">Cancel</button>`);
+ if(!p)return alert("Employee not found.");
+ openModal(`<h2>Edit Employee</h2><label>Name</label><input id="mEmpName" value="${esc(p.full_name)}"><label>Role</label><select id="mEmpRole"><option>technician</option><option>manager</option><option>admin</option></select><br><br><button type="button" class="success" onclick="saveEmployee('${id}')">Save</button> <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
  $("mEmpRole").value=p.role;
 }
 
@@ -634,6 +646,33 @@ function exportCSV(){
  const u=URL.createObjectURL(new Blob([txt],{type:"text/csv"})),a=document.createElement("a");a.href=u;a.download="skidtrack-report.csv";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
 }
 
+/* MODAL + ACTION BUTTON SUPPORT */
+function openModal(html){
+ const bg=$("modalBg");
+ const content=$("modalContent");
+ if(!bg || !content){
+  console.error("Modal elements are missing.");
+  return;
+ }
+ content.innerHTML=html;
+ bg.classList.remove("hidden");
+}
+
+function closeModal(){
+ const bg=$("modalBg");
+ const content=$("modalContent");
+ if(bg)bg.classList.add("hidden");
+ if(content)content.innerHTML="";
+}
+
+// Close modal by clicking outside it or pressing Escape.
+document.addEventListener("click",e=>{
+ if(e.target?.id==="modalBg")closeModal();
+});
+document.addEventListener("keydown",e=>{
+ if(e.key==="Escape")closeModal();
+});
+
 /* QR */
 function skidUrl(s){return location.origin+location.pathname+"?skid="+encodeURIComponent(s.skid_number)}
 
@@ -645,14 +684,14 @@ function drawQr(canvasId,text,size){
 
 function showQr(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
- openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><canvas id="qrCanvas"></canvas><p class="muted">${esc(s.location||"")}</p><button onclick="printQrLabel('${s.id}')">Print Label</button> <button class="secondary" onclick="closeModal()">Close</button></div>`);
+ openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><canvas id="qrCanvas"></canvas><p class="muted">${esc(s.location||"")}</p><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),280),50);
 }
 
 function viewSkid(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
- openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><canvas id="qrCanvas"></canvas></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button class="secondary" onclick="closeModal()">Close</button>`);
+ openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><canvas id="qrCanvas"></canvas></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),180),50);
 }
 
