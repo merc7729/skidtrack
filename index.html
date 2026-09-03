@@ -131,7 +131,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
     <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
    <div class="row">
-<div><label>Selected Skid</label><select id="selectedSkidDisplay" required onchange="selectedSkidChanged()"><option value="">Select Skid</option></select></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan skid QR code"><input id="selectedSkidId" type="hidden"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
 <div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
@@ -536,7 +536,7 @@ function showPage(id){
 async function loadSkids(){
  const {data,error}=await sb.from("skids").select("*").order("skid_number");
  if(error)console.error(error);allSkids=data||[];
- if(typeof updateSelectedSkidDisplay==="function")updateSelectedSkidDisplay();
+ 
 
 }
 
@@ -1068,38 +1068,33 @@ function getSoFromSkidNumber(skidNumber){
  return skidSoNumber(skidNumber);
 }
 
-function selectedSkidChanged(){
- const skidId=$("selectedSkidDisplay")?.value||"";
- const skid=allSkids.find(s=>String(s.id)===String(skidId));
- if(!skid)return;
 
- const so=getSoFromSkidNumber(skid.skid_number);
+
+function updateSelectedSkidDisplay(skid){
+ const display=$("selectedSkidDisplay");
+ const idField=$("selectedSkidId");
+ if(!display || !idField)return;
+
+ if(!skid){
+  display.value="";
+  idField.value="";
+  return;
+ }
+
+ display.value=skid.skid_number||"";
+ idField.value=skid.id||"";
+
+ const so=getSoFromSkidNumber(skid.skid_number||"");
  if($("workSO")){
   $("workSO").value=so;
   populateWTForSelectedSO();
  }
 }
 
-function updateSelectedSkidDisplay(){
- const select=$("selectedSkidDisplay");
- if(!select)return;
-
- const current=select.value;
- select.innerHTML='<option value="">Select Skid</option>'+
-  allSkids
-   .slice()
-   .sort((a,b)=>String(a.skid_number||"").localeCompare(String(b.skid_number||"")))
-   .map(s=>`<option value="${esc(s.id)}">${esc(s.skid_number)}</option>`)
-   .join("");
-
- if(current && allSkids.some(s=>String(s.id)===String(current))){
-  select.value=current;
- }
-}
-
 function populateWTForSelectedSO(){
  const so=$("workSO")?.value||"";
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
+ if($("selectedSkidId"))$("selectedSkidId").value="";
  const wt=$("workWT");
  if(!wt)return;
 
@@ -1165,7 +1160,7 @@ function syncSoWtToSelectedSkid(){
 async function saveWork(e){
  e.preventDefault();
 
- if(!$("selectedSkidDisplay") || !$("selectedSkidDisplay").value){
+ if(!$("selectedSkidId") || !$("selectedSkidId").value){
   return setStatus("workMessage","Choose a skid number before saving the work record.","error");
  }
 
@@ -1176,7 +1171,7 @@ async function saveWork(e){
  setStatus("workMessage","Saving...");
 
  const payload={
-  skid_id:$("selectedSkidDisplay")?.value||null,
+  skid_id:$("selectedSkidId")?.value||null,
   technician_id:currentUser.id,
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:$("workWT")?.value||"Work logged",
@@ -1193,6 +1188,7 @@ async function saveWork(e){
  clearTimer();
  $("timeSpent").value="0.00";
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
+ if($("selectedSkidId"))$("selectedSkidId").value="";
  if($("workSO"))$("workSO").value="";
  if($("workWT")){
   $("workWT").innerHTML='<option value="">Select WT/Description</option>';
@@ -1795,7 +1791,7 @@ function handleQr(text){
  if(!n)n=text.trim();
  const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());
  if(!s)return alert("Skid not found: "+n);
- $("selectedSkidDisplay").value=s.id;selectedSkidChanged();if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
+ updateSelectedSkidDisplay(s);if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
 }
 
 function openSkidFromUrl(){
