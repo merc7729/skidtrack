@@ -145,17 +145,25 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 <section id="skids" class="page">
  <h2>Filtration Skids</h2>
  <div id="addSkidCard" class="card admin-only hidden">
-  <h3>+ Add New Skid</h3>
-  <form id="skidForm"><div class="grid">
-   <div><label>Skid Number</label><input id="skidNumber" required placeholder="Enter skid number"></div>
-   <div><label>Location</label><input id="skidLocation"></div>
-   <div><label>System Type</label><input id="systemType"></div>
-   <div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
-  </div><br><button class="success">Add Skid</button></form><div id="skidMessage" class="status"></div>
+  <h3>+ Add Skids</h3>
+  <form id="skidForm">
+   <div class="grid">
+    <div><label>Single Skid Number</label><input id="skidNumber" placeholder="Enter one skid number"></div>
+    <div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
+   </div>
+   <label>Multiple Skid Numbers</label>
+   <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line, for example:
+0007303-003-100
+0007303-003-105
+0007272-003-100"></textarea>
+   <p class="muted">You can add one skid above, paste multiple skid numbers here, or use both. Duplicate skid numbers are skipped.</p>
+   <button class="success">Add Skid(s)</button>
+  </form>
+  <div id="skidMessage" class="status"></div>
  </div><br>
  <div class="card">
   <div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div><br>
-  <div class="table-wrap"><table><thead><tr><th>Skid</th><th>Location</th><th>System</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>Skid</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div>
  </div>
 </section>
 
@@ -543,15 +551,67 @@ function renderDashboard(){
 
 function renderSkids(){
  const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
- const rows=allSkids.filter(s=>[s.skid_number,s.location,s.system_type].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
- $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td>${esc(s.location)}</td><td>${esc(s.system_type)}</td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No skids found.</td></tr>';
+ const rows=allSkids.filter(s=>[s.skid_number].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
 }
 
 async function addSkid(e){
  e.preventDefault();
- const {error}=await sb.from("skids").insert({skid_number:$("skidNumber").value.trim(),location:$("skidLocation").value.trim(),system_type:$("systemType").value.trim(),status:$("skidStatus").value});
- if(error)return setStatus("skidMessage",error.message,"error");
- e.target.reset();setStatus("skidMessage","Skid added.","success");await refreshAllData();
+ if(!admin())return setStatus("skidMessage","Admin access required.","error");
+
+ const single=$("skidNumber").value.trim();
+ const bulk=$("bulkSkidNumbers").value
+  .split(/?
+|,/)
+  .map(v=>v.trim())
+  .filter(Boolean);
+
+ const requested=[single,...bulk].filter(Boolean);
+ const unique=[...new Set(requested.map(v=>v.toUpperCase()))];
+
+ if(!unique.length){
+  return setStatus("skidMessage","Enter at least one skid number.","error");
+ }
+
+ setStatus("skidMessage",`Adding ${unique.length} skid${unique.length===1?"":"s"}...`);
+
+ const existing=new Set(
+  allSkids.map(s=>String(s.skid_number||"").toUpperCase())
+ );
+
+ const toInsert=unique
+  .filter(n=>!existing.has(n))
+  .map(skid_number=>({
+   skid_number,
+   status:$("skidStatus").value
+  }));
+
+ const skipped=unique.length-toInsert.length;
+
+ if(!toInsert.length){
+  return setStatus("skidMessage","All entered skid numbers already exist.","error");
+ }
+
+ const {data,error}=await sb
+  .from("skids")
+  .insert(toInsert)
+  .select("id,skid_number,status");
+
+ if(error){
+  console.error(error);
+  return setStatus("skidMessage","Could not add skids: "+error.message,"error");
+ }
+
+ e.target.reset();
+
+ const added=data?.length||toInsert.length;
+ setStatus(
+  "skidMessage",
+  `Added ${added} skid${added===1?"":"s"}${skipped?`; skipped ${skipped} duplicate${skipped===1?"":"s"}`:""}.`,
+  "success"
+ );
+
+ await refreshAllData();
 }
 
 async function deleteSkid(id){
@@ -575,13 +635,26 @@ async function deleteSkid(id){
 function editSkid(id){
  const s=allSkids.find(x=>x.id===id);
  if(!s)return alert("Skid not found.");
- openModal(`<h2>Edit Skid</h2><label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}"><label>Location</label><input id="mLoc" value="${esc(s.location)}"><label>System Type</label><input id="mSys" value="${esc(s.system_type)}"><label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select><br><br><button type="button" class="success" onclick="saveSkidEdit('${id}')">Save</button> <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+
+ openModal(`<h2>Edit Skid</h2>
+  <label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}">
+  <label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select>
+  <br><br><button type="button" class="success" onclick="saveSkidEdit('${id}')">Save</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+
  $("mStatus").value=s.status;
 }
 
 async function saveSkidEdit(id){
- const {error}=await sb.from("skids").update({skid_number:$("mNum").value.trim(),location:$("mLoc").value.trim(),system_type:$("mSys").value.trim(),status:$("mStatus").value}).eq("id",id);
- if(error)return alert(error.message);closeModal();refreshAllData();
+ const {error}=await sb.from("skids").update({
+  skid_number:$("mNum").value.trim(),
+  status:$("mStatus").value
+ }).eq("id",id);
+
+ if(error)return alert(error.message);
+
+ closeModal();
+ await refreshAllData();
 }
 
 /* START / STOP WORK */
@@ -1641,14 +1714,14 @@ function drawQr(containerId,text,size){
 
 function showQr(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
- openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><div id="qrCanvas" class="qr-container"></div><p class="muted">${esc(s.location||"")}</p><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
+ openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><div id="qrCanvas" class="qr-container"></div><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),280),50);
 }
 
 function viewSkid(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
- openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+ openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),180),50);
 }
 
