@@ -161,7 +161,9 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
  <div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Start</th><th>Stop</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
 
-<section id="employees" class="page"><h2>Employees</h2><div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
+<section id="employees" class="page">
+<div class="top"><h2>Employees</h2><button type="button" class="success" onclick="showAddEmployee()">+ Add Employee</button></div>
+<div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
 
 <section id="reports" class="page">
  <div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div>
@@ -789,6 +791,94 @@ function renderEmployees(){
    </td>
   </tr>`;
  }).join("")||'<tr><td colspan="5" class="empty">No employee profiles.</td></tr>';
+}
+
+function showAddEmployee(){
+ if(!admin())return alert("Admin access required.");
+
+ openModal(`
+  <h2>Add Employee</h2>
+  <label>Full Name</label>
+  <input id="newEmpName" autocomplete="off">
+
+  <label>Username</label>
+  <input id="newEmpUsername" autocomplete="off">
+
+  <label>Email</label>
+  <input id="newEmpEmail" type="email" autocomplete="off">
+
+  <label>Temporary Password</label>
+  <input id="newEmpPassword" type="password" autocomplete="new-password">
+
+  <label>Role</label>
+  <select id="newEmpRole">
+   <option value="technician">Technician</option>
+   <option value="manager">Manager</option>
+   <option value="pipe_fitter">Pipe Fitter</option>
+   <option value="electrician">Electrician</option>
+   <option value="laborer">Laborer</option>
+   <option value="welder">Welder</option>
+   <option value="superviser">Superviser</option>
+  </select>
+
+  <p class="muted">Admin accounts cannot be created from the dashboard.</p>
+  <br>
+  <button type="button" class="success" onclick="addEmployee()">Create Employee</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+  <div id="addEmployeeMessage" class="status"></div>
+ `);
+}
+
+async function addEmployee(){
+ if(!admin())return alert("Admin access required.");
+
+ const fullName=$("newEmpName").value.trim();
+ const username=$("newEmpUsername").value.trim().toLowerCase();
+ const email=$("newEmpEmail").value.trim().toLowerCase();
+ const password=$("newEmpPassword").value;
+ const role=$("newEmpRole").value;
+
+ if(!fullName)return setStatus("addEmployeeMessage","Full name is required.","error");
+
+ if(!/^[a-z0-9._-]{3,40}$/.test(username)){
+  return setStatus("addEmployeeMessage","Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.","error");
+ }
+
+ if(!email || !email.includes("@")){
+  return setStatus("addEmployeeMessage","Enter a valid email address.","error");
+ }
+
+ if(password.length<6){
+  return setStatus("addEmployeeMessage","Temporary password must be at least 6 characters.","error");
+ }
+
+ const allowed=["technician","manager","pipe_fitter","electrician","laborer","welder","superviser"];
+ if(!allowed.includes(role)){
+  return setStatus("addEmployeeMessage","Invalid employee role.","error");
+ }
+
+ setStatus("addEmployeeMessage","Creating employee...");
+
+ const {data,error}=await sb.rpc("admin_create_employee",{
+  p_email:email,
+  p_password:password,
+  p_full_name:fullName,
+  p_username:username,
+  p_role:role
+ });
+
+ if(error){
+  console.error(error);
+  return setStatus("addEmployeeMessage","Could not create employee: "+error.message,"error");
+ }
+
+ if(!data){
+  return setStatus("addEmployeeMessage","Employee was not created.","error");
+ }
+
+ closeModal();
+ await refreshAllData();
+ alert("Employee created successfully. They can sign in with their username and temporary password.");
 }
 
 function editEmployee(id){
