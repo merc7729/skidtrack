@@ -115,6 +115,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    <div id="timerDisplay" class="timer">00:00:00</div>
    <div class="row">
     <button id="startWorkBtn" class="success" onclick="startWork()">▶ Start Work</button>
+    <button id="pauseWorkBtn" class="warning" onclick="togglePauseWork()" disabled>⏸ Pause</button>
     <button id="stopWorkBtn" class="danger" onclick="stopWork()" disabled>■ Stop Work</button>
    </div>
    <div id="timerMessage" class="status"></div>
@@ -189,7 +190,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const APP_URL="https://skidtrack.vercel.app/";
 
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
-let html5QrCode=null,activeStartTime=null,timerInterval=null;
+let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null,totalPausedMs=0;
 
 const $=x=>document.getElementById(x);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
@@ -573,43 +574,99 @@ async function saveSkidEdit(id){
 /* START / STOP WORK */
 function startWork(){
  if(activeStartTime)return;
+
  activeStartTime=new Date();
+ pauseStartedAt=null;
+ totalPausedMs=0;
+
  localStorage.setItem("skidtrack_active_start",activeStartTime.toISOString());
- $("startWorkBtn").disabled=true;$("stopWorkBtn").disabled=false;
- $("timerStatus").textContent="Work started: "+activeStartTime.toLocaleString();
- setTimerStatus("Timer running...","success");
- updateTimer();timerInterval=setInterval(updateTimer,1000);
+ localStorage.setItem("skidtrack_total_paused_ms","0");
+ localStorage.removeItem("skidtrack_pause_started_at");
+
+ $("startWorkBtn").disabled=true;
+ $("pauseWorkBtn").disabled=false;
+ $("pauseWorkBtn").textContent="⏸ Pause";
+ $("stopWorkBtn").disabled=false;
+ $("timerStatus").textContent="Work timer running...";
+
+ updateTimer();
+ timerInterval=setInterval(updateTimer,1000);
 }
 
 function updateTimer(){
  if(!activeStartTime)return;
 
- const elapsedMs=Date.now()-activeStartTime.getTime();
- const totalSeconds=Math.floor(elapsedMs/1000);
- const totalMinutes=Math.floor(totalSeconds/60);
- const decimalHours=elapsedMs/3600000;
+ const now=pauseStartedAt ? pauseStartedAt.getTime() : Date.now();
+ const elapsed=Math.max(
+  0,
+  now-activeStartTime.getTime()-totalPausedMs
+ );
 
- const h=String(Math.floor(totalSeconds/3600)).padStart(2,"0");
- const m=String(Math.floor((totalSeconds%3600)/60)).padStart(2,"0");
- const s=String(totalSeconds%60).padStart(2,"0");
+ const seconds=Math.floor(elapsed/1000);
+ const minutes=Math.floor(seconds/60);
+ const hours=elapsed/3600000;
 
- $("timerDisplay").textContent=`${h}:${m}:${s}`;
+ $("timerDisplay").textContent=
+  `${String(Math.floor(seconds/3600)).padStart(2,"0")}:`+
+  `${String(Math.floor((seconds%3600)/60)).padStart(2,"0")}:`+
+  `${String(seconds%60).padStart(2,"0")}`;
 
- // Automatically update the Hours field while work is running.
- $("timeSpent").value=decimalHours.toFixed(2);
+ $("timeSpent").value=hours.toFixed(2);
+ $("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
+}
 
- // Show total minutes for easier time tracking.
- $("minutesDisplay").textContent=`${totalMinutes} minute${totalMinutes===1?"":"s"}`;
+
+function togglePauseWork(){
+ if(!activeStartTime)return;
+
+ if(!pauseStartedAt){
+  pauseStartedAt=new Date();
+  localStorage.setItem("skidtrack_pause_started_at",pauseStartedAt.toISOString());
+
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=null;
+
+  $("pauseWorkBtn").textContent="▶ Resume";
+  $("timerStatus").textContent="Work timer paused.";
+  updateTimer();
+  return;
+ }
+
+ const resumedAt=new Date();
+ totalPausedMs += resumedAt.getTime()-pauseStartedAt.getTime();
+
+ localStorage.setItem("skidtrack_total_paused_ms",String(totalPausedMs));
+ localStorage.removeItem("skidtrack_pause_started_at");
+
+ pauseStartedAt=null;
+ $("pauseWorkBtn").textContent="⏸ Pause";
+ $("timerStatus").textContent="Work timer running...";
+
+ updateTimer();
+ timerInterval=setInterval(updateTimer,1000);
 }
 
 function clearTimer(){
- if(timerInterval)clearInterval(timerInterval);timerInterval=null;activeStartTime=null;
+ if(timerInterval)clearInterval(timerInterval);
+
+ timerInterval=null;
+ activeStartTime=null;
+ pauseStartedAt=null;
+ totalPausedMs=0;
+
  localStorage.removeItem("skidtrack_active_start");
- if($("startWorkBtn"))$("startWorkBtn").disabled=false;
- if($("stopWorkBtn"))$("stopWorkBtn").disabled=true;
+ localStorage.removeItem("skidtrack_total_paused_ms");
+ localStorage.removeItem("skidtrack_pause_started_at");
+
  if($("timerDisplay"))$("timerDisplay").textContent="00:00:00";
  if($("minutesDisplay"))$("minutesDisplay").textContent="0 minutes";
  if($("timerStatus"))$("timerStatus").textContent="No active work session.";
+ if($("startWorkBtn"))$("startWorkBtn").disabled=false;
+ if($("pauseWorkBtn")){
+  $("pauseWorkBtn").disabled=true;
+  $("pauseWorkBtn").textContent="⏸ Pause";
+ }
+ if($("stopWorkBtn"))$("stopWorkBtn").disabled=true;
 }
 
 async function stopWork(){
@@ -617,8 +674,19 @@ async function stopWork(){
 
  const stop=new Date();
  const start=activeStartTime;
- const hours=(stop-start)/3600000;
- const minutes=Math.round((stop-start)/60000);
+
+ let pausedMs=totalPausedMs;
+ if(pauseStartedAt){
+  pausedMs += stop.getTime()-pauseStartedAt.getTime();
+ }
+
+ const activeElapsedMs=Math.max(
+  0,
+  stop.getTime()-start.getTime()-pausedMs
+ );
+
+ const hours=activeElapsedMs/3600000;
+ const minutes=Math.floor(activeElapsedMs/60000);
 
  // Stop the live timer immediately.
  if(timerInterval)clearInterval(timerInterval);
@@ -628,6 +696,7 @@ async function stopWork(){
  $("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
  $("timerStatus").textContent=`Stopping work and saving record...`;
  $("startWorkBtn").disabled=true;
+ $("pauseWorkBtn").disabled=true;
  $("stopWorkBtn").disabled=true;
 
  // Required fields must be present before automatic saving.
@@ -638,8 +707,10 @@ async function stopWork(){
   window.pendingStartTime=start.toISOString();
   window.pendingStopTime=stop.toISOString();
   activeStartTime=null;
-  localStorage.removeItem("skidtrack_active_start");
+  localStorage.removeItem("skidtrack_active_start");localStorage.removeItem("skidtrack_total_paused_ms");localStorage.removeItem("skidtrack_pause_started_at");
   $("startWorkBtn").disabled=false;
+  $("pauseWorkBtn").disabled=true;
+  $("pauseWorkBtn").textContent="⏸ Pause";
 
   setStatus(
    "workMessage",
@@ -674,6 +745,8 @@ async function stopWork(){
   localStorage.removeItem("skidtrack_active_start");
 
   $("startWorkBtn").disabled=false;
+  $("pauseWorkBtn").disabled=true;
+  $("pauseWorkBtn").textContent="⏸ Pause";
   $("stopWorkBtn").disabled=true;
 
   setStatus(
@@ -1298,7 +1371,29 @@ function openSkidFromUrl(){
 /* Restore active timer after refresh */
 window.addEventListener("load",()=>{
  const saved=localStorage.getItem("skidtrack_active_start");
- if(saved){activeStartTime=new Date(saved);$("startWorkBtn").disabled=true;$("stopWorkBtn").disabled=false;$("timerStatus").textContent="Work session restored: "+activeStartTime.toLocaleString();updateTimer();timerInterval=setInterval(updateTimer,1000)}
+ if(saved){
+  activeStartTime=new Date(saved);
+  totalPausedMs=Number(localStorage.getItem("skidtrack_total_paused_ms")||0);
+
+  const savedPause=localStorage.getItem("skidtrack_pause_started_at");
+
+  $("startWorkBtn").disabled=true;
+  $("pauseWorkBtn").disabled=false;
+  $("stopWorkBtn").disabled=false;
+
+  if(savedPause){
+   pauseStartedAt=new Date(savedPause);
+   $("pauseWorkBtn").textContent="▶ Resume";
+   $("timerStatus").textContent="Paused work session restored.";
+   updateTimer();
+  }else{
+   pauseStartedAt=null;
+   $("pauseWorkBtn").textContent="⏸ Pause";
+   $("timerStatus").textContent="Work session restored: "+activeStartTime.toLocaleString();
+   updateTimer();
+   timerInterval=setInterval(updateTimer,1000);
+  }
+ }
 });
 </script>
 </body>
