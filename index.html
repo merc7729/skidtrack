@@ -161,7 +161,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
  <div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Start</th><th>Stop</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
 
-<section id="employees" class="page"><h2>Employees</h2><div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>ID</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
+<section id="employees" class="page"><h2>Employees</h2><div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
 
 <section id="reports" class="page">
  <div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div>
@@ -768,7 +768,7 @@ function renderEmployees(){
 
   return `<tr>
    <td>${esc(p.full_name)}</td>
-   <td>${esc(p.id)}</td>
+   <td><b>${esc(p.username||"—")}</b></td>
    <td>${roleControl}</td>
    <td><span class="badge ${isActive?"active":"out_of_service"}">${isActive?"Active":"Disabled"}</span></td>
    <td>
