@@ -793,9 +793,9 @@ async function stopWork(){
 
  // Required fields must be present before automatic saving.
  const skidId=$("workSkid").value;
- const workPerformed=$("workPerformed").value.trim();
+ const workPerformed=$("workWT")?.value||"Work logged";
 
- if(!skidId || !workPerformed){
+ if(!skidId){
   window.pendingStartTime=start.toISOString();
   window.pendingStopTime=stop.toISOString();
   activeStartTime=null;
@@ -806,7 +806,7 @@ async function stopWork(){
 
   setStatus(
    "workMessage",
-   "Timer stopped. Select a skid and enter Work Performed, then click Save Work Record.",
+   "Timer stopped. Select a skid, then click Save Work Record.",
    "error"
   );
   return;
@@ -853,15 +853,9 @@ async function stopWork(){
  $("workForm").reset();
  window.pendingStartTime=null;
  window.pendingStopTime=null;
- activeStartTime=null;
- localStorage.removeItem("skidtrack_active_start");
-
- $("timerDisplay").textContent="00:00:00";
- $("minutesDisplay").textContent="0 minutes";
+ clearTimer();
+ $("timeSpent").value="0.00";
  $("timerStatus").textContent="Work record automatically saved.";
-
- $("startWorkBtn").disabled=false;
- $("stopWorkBtn").disabled=true;
 
  setStatus(
   "workMessage",
@@ -1195,7 +1189,7 @@ async function saveWork(e){
  };
  const {error}=await sb.from("work_records").insert(payload);
  if(error)return setStatus("workMessage",error.message,"error");
- e.target.reset();window.pendingStartTime=null;window.pendingStopTime=null;clearTimer();
+ e.target.reset();window.pendingStartTime=null;window.pendingStopTime=null;clearTimer();$("timeSpent").value="0.00";
  setStatus("workMessage","✓ Work record saved.","success");refreshAllData();
 }
 
