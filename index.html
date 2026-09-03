@@ -217,11 +217,18 @@ function formatRole(role){
 function setStatus(id,msg,type=""){const e=$(id);e.textContent=msg;e.className="status "+type}
 function setTimerStatus(msg,type=""){setStatus("timerMessage",msg,type)}
 
-document.addEventListener("DOMContentLoaded",()=>{populateWorkNumberDropdowns();
+document.addEventListener("DOMContentLoaded",()=>{
  $("loginForm").onsubmit=login;
  $("resetForm").onsubmit=resetPassword;
  $("workForm").onsubmit=saveWork;
  $("skidForm").onsubmit=addSkid;
+
+ try{
+  populateWorkNumberDropdowns();
+ }catch(err){
+  console.error("SO/WT dropdown setup failed:",err);
+ }
+
  checkSession();
 });
 
@@ -783,6 +790,134 @@ async function stopWork(){
 
  await refreshAllData();
 }
+
+const wtNumbers=[
+  {so:"0007303",code:'0007303-003-100',description:'BF Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-105',description:'BF Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-110',description:'BF Skid- P/F-Labor'},
+  {so:"0007303",code:'0007303-003-115',description:'BF Skid- Panel'},
+  {so:"0007303",code:'0007303-003-120',description:'BF Skid- Skid Elec'},
+  {so:"0007303",code:'0007303-003-125',description:'BF Skid-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-130',description:'BF Skid-FAT'},
+  {so:"0007303",code:'0007303-003-150',description:'DWT CIP Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-155',description:'DWT CIP Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-160',description:'DWT CIP Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-165',description:'DWT CIP Skid-Panel'},
+  {so:"0007303",code:'0007303-003-170',description:'DWT CIP Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-175',description:'DWT CIP Skid-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-180',description:'DWT CIP Skid-FAT'},
+  {so:"0007303",code:'0007303-003-200',description:'RO CF Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-205',description:'RO CF Skid- EIVS'},
+  {so:"0007303",code:'0007303-003-210',description:'RO CF Skid- P/F-Labor'},
+  {so:"0007303",code:'0007303-003-215',description:'RO CF Skid-Panel'},
+  {so:"0007303",code:'0007303-003-220',description:'RO CF Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-225',description:'RO CF Skid-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-230',description:'RO CF Skid-FAT'},
+  {so:"0007303",code:'0007303-003-250',description:'RO A/B Skids-ST/Coat'},
+  {so:"0007303",code:'0007303-003-255',description:'RO A/B Skids-EIVS'},
+  {so:"0007303",code:'0007303-003-260',description:'RO A/B Skids-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-265',description:'RO A/B Skids-Panel'},
+  {so:"0007303",code:'0007303-003-270',description:'RO A/B Skids-Skid Elec'},
+  {so:"0007303",code:'0007303-003-275',description:'RO A/B Skids-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-280',description:'RO A/B Skids-FAT'},
+  {so:"0007303",code:'0007303-003-300',description:'EDI Feed Pump Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-305',description:'EDI Feed Pump Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-310',description:'EDI Feed Pump Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-315',description:'EDI Feed Pump Skid-Panel'},
+  {so:"0007303",code:'0007303-003-320',description:'EDI Feed Pump Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-325',description:'EDI Feed Pump Skid-Process/Air'},
+  {so:"0007303",code:'0007303-003-330',description:'EDI Feed Pump Skid-FAT'},
+  {so:"0007303",code:'0007303-003-350',description:'EDI A/B Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-355',description:'EDI A/B Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-360',description:'EDI A/B Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-365',description:'EDI A/B Skid-Panel'},
+  {so:"0007303",code:'0007303-003-370',description:'EDI A/B Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-375',description:'EDI A/B Skid-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-380',description:'EDI A/B Skid-FAT'},
+  {so:"0007303",code:'0007303-003-400',description:'EDI Reject Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-405',description:'EDI Reject Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-410',description:'EDI Reject Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-415',description:'EDI Reject Skid-Panel'},
+  {so:"0007303",code:'0007303-003-420',description:'EDI Reject Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-425',description:'EDI Reject Skid-Process/Air Tu'},
+  {so:"0007303",code:'0007303-003-430',description:'EDI Reject Skid-FAT'},
+  {so:"0007303",code:'0007303-003-450',description:'MB Manifold Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-455',description:'MB Manifold Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-460',description:'MB Manifold-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-465',description:'MB Manifold-Panel'},
+  {so:"0007303",code:'0007303-003-470',description:'MB Manfiold-Skid Elec'},
+  {so:"0007303",code:'0007303-003-475',description:'MB Manifold-Process/Air'},
+  {so:"0007303",code:'0007303-003-480',description:'MB Manifold-FAT'},
+  {so:"0007303",code:'0007303-003-500',description:'C02 Injection-ST/Coat'},
+  {so:"0007303",code:'0007303-003-505',description:'C02 Injection-EIVS'},
+  {so:"0007303",code:'0007303-003-510',description:'C02 Injection-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-515',description:'C02 Injection-Panel'},
+  {so:"0007303",code:'0007303-003-520',description:'C02 Injection-Skid Elec'},
+  {so:"0007303",code:'0007303-003-525',description:'C02 Injection-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-530',description:'C02 Injection-FAT'},
+  {so:"0007303",code:'0007303-003-550',description:'Calcite A/B Skids-ST/Coat'},
+  {so:"0007303",code:'0007303-003-555',description:'Calcite A/B Skids-EIVS'},
+  {so:"0007303",code:'0007303-003-560',description:'Calcite A/B Skids-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-565',description:'Calcite A/B Skids-Panel'},
+  {so:"0007303",code:'0007303-003-570',description:'Calcite A/B Skids-Skid Elec'},
+  {so:"0007303",code:'0007303-003-575',description:'Calcite A/B Skids-Process/Air'},
+  {so:"0007303",code:'0007303-003-580',description:'Calcite A/B Skids-FAT'},
+  {so:"0007303",code:'0007303-003-600',description:'EFF Panel Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-605',description:'EFF Panel Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-610',description:'EFF Panel Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-615',description:'EFF Panel Skid-Panel'},
+  {so:"0007303",code:'0007303-003-620',description:'EFF Panel Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-625',description:'EFF Panel Skid-Process/Air Tub'},
+  {so:"0007303",code:'0007303-003-630',description:'EFF Panel Skid-FAT'},
+  {so:"0007303",code:'0007303-003-650',description:'Bisulfite Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-655',description:'Bisulfite Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-660',description:'Bisulfite Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-665',description:'Bisulfite Skid-Panel'},
+  {so:"0007303",code:'0007303-003-670',description:'Bisulfite Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-675',description:'Bisulfite Skid-Process/Air Tub'},
+  {so:"0007303",code:'0007303-003-680',description:'Bisulfite Skid-FAT'},
+  {so:"0007303",code:'0007303-003-700',description:'Antiscalant Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-705',description:'Antiscalant Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-710',description:'Antiscalant Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-715',description:'Antiscalant Skid-Panel'},
+  {so:"0007303",code:'0007303-003-720',description:'Antiscalant Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-725',description:'Antiscalant Skid-Process/Air T'},
+  {so:"0007303",code:'0007303-003-730',description:'Antiscalant Skid-FAT'},
+  {so:"0007303",code:'0007303-003-750',description:'Sulf Acid Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-755',description:'Sulf Acid Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-760',description:'Sulf Acid Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-765',description:'Sulf Acid Skid-Panel'},
+  {so:"0007303",code:'0007303-003-770',description:'Sulf Acid Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-775',description:'Sulf Acid Skid-Process/Air Tub'},
+  {so:"0007303",code:'0007303-003-780',description:'Sulf Acid Skid-FAT'},
+  {so:"0007303",code:'0007303-003-800',description:'Caustic Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-805',description:'Caustic Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-810',description:'Caustic Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-815',description:'Caustic Skid-Panel'},
+  {so:"0007303",code:'0007303-003-820',description:'Caustic Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-825',description:'Caustic Skid-Process/Air Tube'},
+  {so:"0007303",code:'0007303-003-830',description:'Caustic Skid-FAT'},
+  {so:"0007303",code:'0007303-003-850',description:'Sodium Hypo Skid-ST/Coat'},
+  {so:"0007303",code:'0007303-003-855',description:'Sodium Hypo Skid-EIVS'},
+  {so:"0007303",code:'0007303-003-860',description:'Sodium Hypo Skid-P/F-Labor'},
+  {so:"0007303",code:'0007303-003-865',description:'Sodium Hypo Skid-Panel'},
+  {so:"0007303",code:'0007303-003-870',description:'Sodium Hypo Skid-Skid Elec'},
+  {so:"0007303",code:'0007303-003-875',description:'Sodium Hypo Skid-Process/Air T'},
+  {so:"0007303",code:'0007303-003-880',description:'Sodium Hypo Skid-FAT'},
+  {so:"0007303",code:'0007303-003-900',description:'RO Permeate Tank'},
+  {so:"0007303",code:'0007303-003-902',description:'CIP Tank'},
+  {so:"0007303",code:'0007303-003-903',description:'EDI Reject Tank'},
+  {so:"0007303",code:'0007303-003-905',description:'Cartridge Filter Replacments'},
+  {so:"0007303",code:'0007303-003-910',description:'Loose Ship'},
+  {so:"0007303",code:'0007303-003-915',description:'MCP'},
+  {so:"0007303",code:'0007303-003-920',description:'Calcite Vessels/Int/Platform'},
+  {so:"0007303",code:'0007303-003-925',description:'CIP Platform/Coating'},
+  {so:"0007303",code:'0007303-003-930',description:'Misc Material'},
+  {so:"0007303",code:'0007303-003-935',description:'Injection Tee'},
+  {so:"0007303",code:'0007303-003-950',description:'Skid Electric'},
+  {so:"0007303",code:'0007303-003-980',description:'Project Photos'},
+  {so:"0007303",code:'0007303-003-990',description:'Billing / Closure'}
+ ];
 
 function populateWorkNumberDropdowns(){
  const soNumbers=["0007303","0007272","0007176","0007295"];
