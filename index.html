@@ -183,6 +183,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const APP_URL="https://skidtrack.vercel.app/";
 
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
 let html5QrCode=null,activeStartTime=null,timerInterval=null;
@@ -215,6 +216,17 @@ function showLogin(){
 }
 
 async function checkSession(){
+ const authHash=new URLSearchParams(location.hash.replace(/^#/,""));
+ const authQuery=new URLSearchParams(location.search);
+ const authError=authHash.get("error_description") || authQuery.get("error_description");
+ if(authError){
+  hideAuthScreens();
+  $("appScreen").classList.add("hidden");
+  $("loginScreen").classList.remove("hidden");
+  setStatus("loginMessage","Password reset link error: "+decodeURIComponent(authError),"error");
+  return;
+ }
+
  // Supabase emits PASSWORD_RECOVERY only after the recovery link has
  // been exchanged for a valid session. Show the reset form at that point.
  sb.auth.onAuthStateChange(async (event,session)=>{
@@ -346,7 +358,7 @@ async function forgotPassword(){
   );
  }
 
- const redirectTo=location.origin+location.pathname;
+ const redirectTo=APP_URL;
  setStatus("loginMessage","Sending password reset email...");
 
  const {error}=await sb.auth.resetPasswordForEmail(loginEmail,{redirectTo});
