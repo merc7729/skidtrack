@@ -152,10 +152,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
     <div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
    </div>
    <label>Multiple Skid Numbers</label>
-   <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line, for example:
-0007303-003-100
-0007303-003-105
-0007272-003-100"></textarea>
+   <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line"></textarea>
    <p class="muted">You can add one skid above, paste multiple skid numbers here, or use both. Duplicate skid numbers are skipped.</p>
    <button class="success">Add Skid(s)</button>
   </form>
@@ -214,15 +211,10 @@ function addSkidPrefix(value){
 function skidSoNumber(value){
  const raw=String(value||"").trim();
 
- // Match one of the known SO numbers anywhere in the selected skid number.
- // This supports both legacy skid numbers like:
- //   0007303-003-100
- // and prefixed skid numbers like:
- //   0000007303-003-100
- const knownSOs=["0007303","0007272","0007176","0007295"];
-
- const match=knownSOs.find(so=>raw.includes(so));
- return match||"";
+ // SO# is always the first 7 digits of the actual selected skid number.
+ // Example: 0007303-003-100 -> 0007303
+ const match=raw.match(/^(\d{7})/);
+ return match ? match[1] : "";
 }
 
 const fmt=d=>d?new Date(d).toLocaleString():"";
