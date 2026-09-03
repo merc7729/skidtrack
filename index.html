@@ -132,7 +132,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    </div>
    <div class="row">
 <div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
-<div><label>WT/Description</label><select id="workWT"><option value="">Select WT/Description</option></select></div>
+<div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
@@ -1132,6 +1132,10 @@ async function saveWork(e){
 
  if(!$("workSkid").value){
   return setStatus("workMessage","Select a skid before saving.","error");
+ }
+
+ if(!$("workWT") || !$("workWT").value){
+  return setStatus("workMessage","Choose a WT/Description before saving the work record.","error");
  }
 
  setStatus("workMessage","Saving...");
