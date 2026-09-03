@@ -213,9 +213,7 @@ function addSkidPrefix(value){
  return String(value||"").trim();
 }
 function skidSoNumber(value){
- const raw=String(value||"").trim();
- const match=raw.match(/^(\d{7})/);
- return match ? match[1] : "";
+ return String(value||"").trim();
 }
 
 const fmt=d=>d?new Date(d).toLocaleString():"";
