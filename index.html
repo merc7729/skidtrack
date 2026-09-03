@@ -1081,13 +1081,10 @@ function updateSelectedSkidDisplay(skid){
   return;
  }
 
- // Show the actual skid number encoded by / resolved from the QR.
  display.value=String(skid.skid_number||"").trim();
  idField.value=String(skid.id||"");
 
- // Drive SO# from the scanned skid's first 7 digits.
  const so=getSoFromSkidNumber(skid.skid_number||"");
-
  if($("workSO")){
   $("workSO").value=so;
   populateWTForSelectedSO();
@@ -1789,33 +1786,68 @@ async function stopScanner(){
 }
 
 function handleQr(text){
- let scanned="";
+ let qrSkidNumber="";
 
  try{
-  const url=new URL(text);
-  scanned=url.searchParams.get("skid")||"";
+  const url=new URL(String(text||"").trim());
+  qrSkidNumber=String(url.searchParams.get("skid")||"").trim();
  }catch(e){
-  scanned=String(text||"").replace(/^SKID:/i,"").trim();
+  qrSkidNumber=String(text||"")
+   .replace(/^SKID:/i,"")
+   .trim();
  }
 
- if(!scanned)scanned=String(text||"").trim();
+ if(!qrSkidNumber){
+  return alert("QR code does not contain a skid number.");
+ }
 
- const normalized=scanned.toLowerCase();
+ // Show the skid number exactly as supplied by the QR.
+ if($("selectedSkidDisplay")){
+  $("selectedSkidDisplay").value=qrSkidNumber;
+ }
 
+ // Resolve the scanned number to the actual skid record.
  const skid=allSkids.find(s=>
-  String(s.skid_number||"").trim().toLowerCase()===normalized
+  String(s.skid_number||"").trim().toLowerCase()===
+  qrSkidNumber.toLowerCase()
  );
 
  if(!skid){
-  alert("Skid not found: "+scanned);
+  if($("selectedSkidId"))$("selectedSkidId").value="";
+
+  const so=getSoFromSkidNumber(qrSkidNumber);
+  if($("workSO")){
+   $("workSO").value=so;
+   populateWTForSelectedSO();
+  }
+
+  setStatus(
+   "workMessage",
+   "QR skid number loaded, but that skid is not currently in the Skids database.",
+   "error"
+  );
+
+  stopScanner();
   return;
  }
 
- updateSelectedSkidDisplay(skid);
+ // Store the real database skid ID for Save Work Record.
+ if($("selectedSkidId")){
+  $("selectedSkidId").value=String(skid.id||"");
+ }
+
+ // Match SO# from the first 7 digits of the scanned skid number,
+ // then filter WT/Description to the same SO#.
+ const so=getSoFromSkidNumber(qrSkidNumber);
+
+ if($("workSO")){
+  $("workSO").value=so;
+  populateWTForSelectedSO();
+ }
 
  setStatus(
   "workMessage",
-  "✓ Selected skid: "+skid.skid_number,
+  "✓ QR skid selected: "+qrSkidNumber,
   "success"
  );
 
