@@ -190,7 +190,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
  <div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Start</th><th>Stop</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
 
-<section id="employees" class="page"><h2>Employees</h2><div class="card"><p class="muted">Deleting an employee disables their login but preserves all existing work history.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>ID</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
+<section id="employees" class="page"><h2>Employees</h2><div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>ID</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
 
 <section id="reports" class="page">
  <div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div>
@@ -608,7 +608,7 @@ async function loadSkids(){
 
 async function loadWorkRecords(){
  const {data,error}=await sb.from("work_records")
- .select("id,technician_id,work_performed,time_spent,notes,performed_at,start_time,stop_time,skid_id,skids(id,skid_number),profiles(full_name)")
+ .select("id,technician_id,technician_name,work_performed,time_spent,notes,performed_at,start_time,stop_time,skid_id,skids(id,skid_number),profiles(full_name)")
  .order("performed_at",{ascending:false});
  if(error)console.error(error);allWorkRecords=data||[];
 }
@@ -623,7 +623,7 @@ function renderDashboard(){
  const h=allWorkRecords.reduce((a,r)=>a+Number(r.time_spent||0),0);
  $("totalSkids").textContent=allSkids.length;$("totalWork").textContent=allWorkRecords.length;$("totalHours").textContent=h.toFixed(2);
  $("totalEmployees").textContent=admin()?allProfiles.length:"—";
- $("recentActivity").innerHTML=allWorkRecords.slice(0,8).map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No work records yet.</td></tr>';
+ $("recentActivity").innerHTML=allWorkRecords.slice(0,8).map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No work records yet.</td></tr>';
 }
 
 function renderSkids(){
@@ -753,6 +753,7 @@ async function stopWork(){
  const payload={
   skid_id:skidId,
   technician_id:currentUser.id,
+  technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:workPerformed,
   time_spent:Number(hours.toFixed(2)),
   notes:$("workNotes").value.trim(),
@@ -809,6 +810,7 @@ async function saveWork(e){
  const payload={
   skid_id:$("workSkid").value,
   technician_id:currentUser.id,
+  technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:$("workPerformed").value.trim(),
   time_spent:Number($("timeSpent").value),
   notes:$("workNotes").value.trim(),
@@ -824,7 +826,7 @@ async function saveWork(e){
 function renderHistory(){
  const q=$("historySearch").value.toLowerCase();
  const rows=allWorkRecords.filter(r=>[r.skids?.skid_number,r.work_performed,r.notes,r.profiles?.full_name].join(" ").toLowerCase().includes(q));
- $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name)}</td><td>${fmt(r.start_time)}</td><td>${fmt(r.stop_time)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
+ $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td><td>${fmt(r.start_time)}</td><td>${fmt(r.stop_time)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
 }
 
 function editWork(id){
@@ -875,9 +877,15 @@ function renderEmployees(){
      <button type="button" class="small warning" onclick="editEmployee('${p.id}')">Edit Name</button>
      ${
       isActive
-       ? `<button type="button" class="small danger" onclick="deleteEmployee('${p.id}')" ${isSelf?"disabled title=\"You cannot delete your own account\"":""}>Delete</button>`
+       ? `<button type="button" class="small danger" onclick="deleteEmployee('${p.id}')" ${isSelf?"disabled title=\"You cannot delete your own account\"":""}>Disable</button>`
        : `<button type="button" class="small success" onclick="restoreEmployee('${p.id}')">Restore</button>`
      }
+     <button type="button"
+       class="small danger"
+       onclick="permanentDeleteEmployee('${p.id}')"
+       ${isSelf?"disabled title=\"You cannot permanently delete your own account\"":""}>
+       Permanent Delete
+     </button>
     </div>
    </td>
   </tr>`;
@@ -987,6 +995,54 @@ async function deleteEmployee(id){
  alert("Employee disabled successfully.");
 }
 
+async function permanentDeleteEmployee(id){
+ if(!admin())return alert("Admin access required.");
+
+ if(id===currentUser?.id){
+  return alert("You cannot permanently delete your own admin account.");
+ }
+
+ const p=allProfiles.find(x=>x.id===id);
+ if(!p)return alert("Employee not found.");
+
+ const displayName=p.full_name || p.username || id;
+
+ const firstConfirm=confirm(
+  `PERMANENTLY DELETE ${displayName}?\n\n`+
+  `This removes the employee's Supabase Auth account and profile.\n`+
+  `This action cannot be undone.`
+ );
+ if(!firstConfirm)return;
+
+ const typed=prompt(
+  `Final confirmation.\n\nType DELETE to permanently remove ${displayName}.`
+ );
+
+ if(typed!=="DELETE"){
+  return alert("Permanent delete cancelled.");
+ }
+
+ const {data,error}=await sb.rpc(
+  "delete_employee_permanently",
+  {p_user_id:id}
+ );
+
+ if(error){
+  console.error(error);
+  return alert(
+   "Permanent delete failed: "+error.message+
+   "\n\nMake sure the delete_employee_permanently SQL function is installed."
+  );
+ }
+
+ if(data!==true){
+  return alert("Permanent delete was not completed.");
+ }
+
+ await refreshAllData();
+ alert(`${displayName} was permanently deleted.`);
+}
+
 async function restoreEmployee(id){
  if(!admin())return alert("Admin access required.");
 
@@ -1028,7 +1084,7 @@ function renderReports(){
  if(!admin())return;
  const rows=reportRows(),h=rows.reduce((a,r)=>a+Number(r.time_spent||0),0);
  $("reportHours").textContent=h.toFixed(2);$("reportCount").textContent=rows.length;
- $("reportTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>';
+ $("reportTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>';
 }
 
 function exportCSV(){
@@ -1096,7 +1152,7 @@ function showQr(id){
 function viewSkid(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
- openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name)}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+ openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Location:</b> ${esc(s.location)}</p><p><b>System:</b> ${esc(s.system_type)}</p><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),180),50);
 }
 
