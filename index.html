@@ -1093,14 +1093,12 @@ function updateSelectedSkidDisplay(skid){
 
 function populateWTForSelectedSO(){
  const so=$("workSO")?.value||"";
- if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
- if($("selectedSkidId"))$("selectedSkidId").value="";
  const wt=$("workWT");
  if(!wt)return;
 
  const matching=wtNumbers.filter(v=>v.so===so);
  wt.innerHTML='<option value="">Select WT/Description</option>'+
-  matching.map(v=>`<option value="${esc(v.wt)}">${esc(v.wt)} - ${esc(v.description||"")}</option>`).join("");
+  matching.map(v=>`<option value="${esc(v.code+" | "+v.description)}">${esc(v.code)} | ${esc(v.description||"")}</option>`).join("");
  wt.disabled=!so;
 }
 
@@ -1792,28 +1790,26 @@ function handleQr(text){
   const url=new URL(String(text||"").trim());
   qrSkidNumber=String(url.searchParams.get("skid")||"").trim();
  }catch(e){
-  qrSkidNumber=String(text||"")
-   .replace(/^SKID:/i,"")
-   .trim();
+  qrSkidNumber=String(text||"").replace(/^SKID:/i,"").trim();
  }
 
  if(!qrSkidNumber){
   return alert("QR code does not contain a skid number.");
  }
 
- // Show the skid number exactly as supplied by the QR.
- if($("selectedSkidDisplay")){
-  $("selectedSkidDisplay").value=qrSkidNumber;
- }
+ const display=$("selectedSkidDisplay");
+ const idField=$("selectedSkidId");
 
- // Resolve the scanned number to the actual skid record.
+ // Always show the skid number that came from the QR.
+ if(display)display.value=qrSkidNumber;
+
  const skid=allSkids.find(s=>
   String(s.skid_number||"").trim().toLowerCase()===
   qrSkidNumber.toLowerCase()
  );
 
  if(!skid){
-  if($("selectedSkidId"))$("selectedSkidId").value="";
+  if(idField)idField.value="";
 
   const so=getSoFromSkidNumber(qrSkidNumber);
   if($("workSO")){
@@ -1823,7 +1819,7 @@ function handleQr(text){
 
   setStatus(
    "workMessage",
-   "QR skid number loaded, but that skid is not currently in the Skids database.",
+   "QR skid number loaded, but that skid is not in the Skids database.",
    "error"
   );
 
@@ -1831,19 +1827,19 @@ function handleQr(text){
   return;
  }
 
- // Store the real database skid ID for Save Work Record.
- if($("selectedSkidId")){
-  $("selectedSkidId").value=String(skid.id||"");
- }
+ // Save actual Supabase skid id separately.
+ if(idField)idField.value=String(skid.id||"");
 
- // Match SO# from the first 7 digits of the scanned skid number,
- // then filter WT/Description to the same SO#.
+ // Match SO from first 7 digits of QR skid number, then populate matching WT list.
  const so=getSoFromSkidNumber(qrSkidNumber);
 
  if($("workSO")){
   $("workSO").value=so;
   populateWTForSelectedSO();
  }
+
+ // Re-assert visible value after WT population so nothing can clear it.
+ if(display)display.value=qrSkidNumber;
 
  setStatus(
   "workMessage",
