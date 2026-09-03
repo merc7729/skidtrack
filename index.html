@@ -823,7 +823,7 @@ function showAddEmployee(){
 
   <p class="muted">Admin accounts cannot be created from the dashboard. Employee accounts are created securely through the Supabase Edge Function.</p>
   <br>
-  <button type="button" class="success" onclick="addEmployee()">Create Employee</button>
+  <button type="button" id="createEmployeeBtn" class="success" onclick="addEmployee()">Create Employee</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
   <div id="addEmployeeMessage" class="status"></div>
  `);
@@ -837,11 +837,16 @@ async function addEmployee(){
  const email=$("newEmpEmail").value.trim().toLowerCase();
  const password=$("newEmpPassword").value;
  const role=$("newEmpRole").value;
+ const btn=$("createEmployeeBtn");
 
  if(!fullName)return setStatus("addEmployeeMessage","Full name is required.","error");
 
  if(!/^[a-z0-9._-]{3,40}$/.test(username)){
-  return setStatus("addEmployeeMessage","Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.","error");
+  return setStatus(
+   "addEmployeeMessage",
+   "Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.",
+   "error"
+  );
  }
 
  if(!email || !email.includes("@")){
@@ -852,61 +857,106 @@ async function addEmployee(){
   return setStatus("addEmployeeMessage","Temporary password must be at least 6 characters.","error");
  }
 
- const allowed=["technician","manager","pipe_fitter","electrician","laborer","welder","superviser"];
+ const allowed=[
+  "technician",
+  "manager",
+  "pipe_fitter",
+  "electrician",
+  "laborer",
+  "welder",
+  "superviser"
+ ];
+
  if(!allowed.includes(role)){
   return setStatus("addEmployeeMessage","Invalid employee role.","error");
  }
 
- setStatus("addEmployeeMessage","Creating employee...");
+ if(btn){
+  btn.disabled=true;
+  btn.textContent="Creating...";
+ }
 
- const {data,error}=await sb.functions.invoke(
-  "admin-create-employee",
-  {
-   body:{
-    email:email,
-    password:password,
-    full_name:fullName,
-    username:username,
-    role:role
+ setStatus("addEmployeeMessage","Creating employee account...");
+
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "admin-create-employee",
+   {
+    body:{
+     email,
+     password,
+     full_name:fullName,
+     username,
+     role
+    }
    }
+  );
+
+  if(error){
+   console.error("Add Employee Edge Function error:",error);
+
+   let message=error.message||"Could not create employee.";
+
+   try{
+    if(error.context){
+     const details=await error.context.json();
+     if(details?.error)message=details.error;
+    }
+   }catch(_){}
+
+   if(/failed to send/i.test(message)){
+    message=
+     "Could not reach the admin-create-employee Edge Function. "+
+     "Verify that the function is deployed in Supabase under that exact name.";
+   }
+
+   return setStatus("addEmployeeMessage",message,"error");
   }
- );
 
- if(error){
-  console.error(error);
+  if(!data?.success){
+   console.error("Unexpected employee creation response:",data);
 
-  let message=error.message||"Could not create employee.";
-
-  try{
-   if(error.context){
-    const details=await error.context.json();
-    if(details?.error)message=details.error;
+   if(data?.message && !data?.success){
+    return setStatus(
+     "addEmployeeMessage",
+     "The deployed Edge Function is not the SkidTrack employee-creation function. "+
+     "Redeploy admin-create-employee with the correct code.",
+     "error"
+    );
    }
-  }catch(_){}
 
-  return setStatus(
+   return setStatus(
+    "addEmployeeMessage",
+    data?.error||"Employee was not created.",
+    "error"
+   );
+  }
+
+  closeModal();
+  await refreshAllData();
+
+  alert(
+   "Employee created successfully.\n\n"+
+   "Username: "+username+
+   "\nRole: "+formatRole(role)+
+   "\n\nThey can sign in with their username and temporary password."
+  );
+
+ }catch(err){
+  console.error("Add Employee unexpected error:",err);
+
+  setStatus(
    "addEmployeeMessage",
-   message,
+   "Unexpected error: "+(err?.message||String(err)),
    "error"
   );
+
+ }finally{
+  if(btn){
+   btn.disabled=false;
+   btn.textContent="Create Employee";
+  }
  }
-
- if(!data?.success){
-  return setStatus(
-   "addEmployeeMessage",
-   data?.error||"Employee was not created.",
-   "error"
-  );
- }
-
- closeModal();
- await refreshAllData();
-
- alert(
-  "Employee created successfully.\n\n"+
-  "Username: "+username+
-  "\n\nThey can sign in immediately with their temporary password."
- );
 }
 
 function editEmployee(id){
