@@ -1783,6 +1783,42 @@ async function stopScanner(){
  html5QrCode=null;$("reader").innerHTML="";
 }
 
+function matchSoAndWtToSkidNumber(skidNumber){
+ const number=String(skidNumber||"").trim();
+ const so=getSoFromSkidNumber(number);
+
+ if($("workSO")){
+  $("workSO").value=so;
+ }
+
+ const wt=$("workWT");
+ if(!wt)return;
+
+ // Only show WT entries belonging to the skid's SO#.
+ const matching=wtNumbers.filter(v=>String(v.so||"").trim()===so);
+
+ wt.innerHTML='<option value="">Select WT/Description</option>'+
+  matching.map(v=>{
+   const value=String(v.code||"")+" | "+String(v.description||"");
+   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+  }).join("");
+
+ wt.disabled=!so;
+
+ // If the skid number itself is a WT code, automatically select that exact WT/Description.
+ const exact=matching.find(v=>
+  String(v.code||"").trim().toLowerCase()===number.toLowerCase()
+ );
+
+ if(exact){
+  wt.value=String(exact.code||"")+" | "+String(exact.description||"");
+  setStatus("workMessage","✓ Skid, SO# and WT/Description matched.","success");
+ }else{
+  wt.value="";
+  setStatus("workMessage","Skid matched SO# "+so+", but no exact WT/Description was found for "+number+".","error");
+ }
+}
+
 function handleQr(text){
  let qrSkidNumber="";
 
@@ -1800,9 +1836,10 @@ function handleQr(text){
  const display=$("selectedSkidDisplay");
  const idField=$("selectedSkidId");
 
- // Always show the skid number that came from the QR.
+ // Display exactly the skid number read from the QR.
  if(display)display.value=qrSkidNumber;
 
+ // Find the actual skid record in Supabase.
  const skid=allSkids.find(s=>
   String(s.skid_number||"").trim().toLowerCase()===
   qrSkidNumber.toLowerCase()
@@ -1810,42 +1847,23 @@ function handleQr(text){
 
  if(!skid){
   if(idField)idField.value="";
-
-  const so=getSoFromSkidNumber(qrSkidNumber);
-  if($("workSO")){
-   $("workSO").value=so;
-   populateWTForSelectedSO();
-  }
-
+  matchSoAndWtToSkidNumber(qrSkidNumber);
   setStatus(
    "workMessage",
-   "QR skid number loaded, but that skid is not in the Skids database.",
+   "QR skid number loaded, but this skid is not in the Skids database.",
    "error"
   );
-
   stopScanner();
   return;
  }
 
- // Save actual Supabase skid id separately.
  if(idField)idField.value=String(skid.id||"");
 
- // Match SO from first 7 digits of QR skid number, then populate matching WT list.
- const so=getSoFromSkidNumber(qrSkidNumber);
+ // SO# = first 7 digits of skid number.
+ // WT/Description = exact WT code matching the full skid number.
+ matchSoAndWtToSkidNumber(qrSkidNumber);
 
- if($("workSO")){
-  $("workSO").value=so;
-  populateWTForSelectedSO();
- }
-
- // Re-assert visible value after WT population so nothing can clear it.
  if(display)display.value=qrSkidNumber;
-
- setStatus(
-  "workMessage",
-  "✓ QR skid selected: "+qrSkidNumber,
-  "success"
- );
 
  stopScanner();
 }
