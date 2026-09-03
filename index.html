@@ -780,90 +780,36 @@ async function stopWork(){
  const hours=activeElapsedMs/3600000;
  const minutes=Math.floor(activeElapsedMs/60000);
 
- // Stop the live timer immediately.
  if(timerInterval)clearInterval(timerInterval);
  timerInterval=null;
 
  $("timeSpent").value=hours.toFixed(2);
  $("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
- $("timerStatus").textContent=`Stopping work and saving record...`;
+ $("timerStatus").textContent="Work stopped. Review the record, then click Save Work Record.";
+
+ // Preserve start/stop timestamps for the manual Save Work Record button.
+ window.pendingStartTime=start.toISOString();
+ window.pendingStopTime=stop.toISOString();
+
+ // End the active timer session without resetting the calculated time.
+ activeStartTime=null;
+ pauseStartedAt=null;
+ totalPausedMs=0;
+
+ localStorage.removeItem("skidtrack_active_start");
+ localStorage.removeItem("skidtrack_total_paused_ms");
+ localStorage.removeItem("skidtrack_pause_started_at");
+
  $("startWorkBtn").disabled=true;
  $("pauseWorkBtn").disabled=true;
+ $("pauseWorkBtn").textContent="⏸ Pause";
  $("stopWorkBtn").disabled=true;
-
- // Required fields must be present before automatic saving.
- const skidId=$("workSkid").value;
- const workPerformed=$("workWT")?.value||"Work logged";
-
- if(!skidId){
-  window.pendingStartTime=start.toISOString();
-  window.pendingStopTime=stop.toISOString();
-  activeStartTime=null;
-  localStorage.removeItem("skidtrack_active_start");localStorage.removeItem("skidtrack_total_paused_ms");localStorage.removeItem("skidtrack_pause_started_at");
-  $("startWorkBtn").disabled=false;
-  $("pauseWorkBtn").disabled=true;
-  $("pauseWorkBtn").textContent="⏸ Pause";
-
-  setStatus(
-   "workMessage",
-   "Timer stopped. Select a skid, then click Save Work Record.",
-   "error"
-  );
-  return;
- }
-
- setStatus("workMessage","Saving work record automatically...");
-
- const payload={
-  skid_id:skidId,
-  technician_id:currentUser.id,
-  technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
-  work_performed:workPerformed,
-  time_spent:Number(hours.toFixed(2)),
-  notes:$("workNotes").value.trim(),so_number:$("workSO")?.value||null,wt_number:$("workWT")?.value||null,
-  start_time:start.toISOString(),
-  stop_time:stop.toISOString()
- };
-
- const {error}=await sb.from("work_records").insert(payload);
-
- if(error){
-  console.error(error);
-
-  // Preserve the completed session so the user can manually retry.
-  window.pendingStartTime=start.toISOString();
-  window.pendingStopTime=stop.toISOString();
-  activeStartTime=null;
-  localStorage.removeItem("skidtrack_active_start");
-
-  $("startWorkBtn").disabled=false;
-  $("pauseWorkBtn").disabled=true;
-  $("pauseWorkBtn").textContent="⏸ Pause";
-  $("stopWorkBtn").disabled=true;
-
-  setStatus(
-   "workMessage",
-   "Automatic save failed: "+error.message+". Your calculated time is still shown. Click Save Work Record to retry.",
-   "error"
-  );
-  return;
- }
-
- // Success: clear the form and reset the timer.
- $("workForm").reset();
- window.pendingStartTime=null;
- window.pendingStopTime=null;
- clearTimer();
- $("timeSpent").value="0.00";
- $("timerStatus").textContent="Work record automatically saved.";
 
  setStatus(
   "workMessage",
-  `✓ Work record automatically saved: ${hours.toFixed(2)} hours (${minutes} minutes).`,
+  "Timer stopped. Review Skid, SO#, WT/Description, hours, and notes, then click Save Work Record.",
   "success"
  );
-
- await refreshAllData();
 }
 
 const wtNumbers=[
@@ -1176,7 +1122,14 @@ function syncSoWtToSelectedSkid(){
 }
 
 async function saveWork(e){
- e.preventDefault();setStatus("workMessage","Saving...");
+ e.preventDefault();
+
+ if(!$("workSkid").value){
+  return setStatus("workMessage","Select a skid before saving.","error");
+ }
+
+ setStatus("workMessage","Saving...");
+
  const payload={
   skid_id:$("workSkid").value,
   technician_id:currentUser.id,
