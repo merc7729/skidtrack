@@ -175,7 +175,13 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 <div class="card"><p class="muted">Disable blocks login and preserves the employee record. Permanent Delete removes the employee account from Supabase Auth after confirmation.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="employeeTable"></tbody></table></div></div></section>
 
 <section id="reports" class="page">
- <div class="top"><h2>Reports</h2><button class="success" onclick="exportCSV()">Export CSV</button></div>
+ <div class="top">
+  <h2>Reports</h2>
+  <div class="actions">
+   <button type="button" class="secondary" onclick="refreshReports()">Refresh</button>
+   <button type="button" class="success" onclick="exportCSV()">Export CSV</button>
+  </div>
+ </div>
  <div class="card"><div class="row">
   <div><label>From</label><input id="reportFrom" type="date" onchange="renderReports()"></div>
   <div><label>To</label><input id="reportTo" type="date" onchange="renderReports()"></div>
@@ -1597,6 +1603,37 @@ function populateFilters(){
  if(!admin())return;
  $("reportEmployee").innerHTML='<option value="">All Employees</option>'+allProfiles.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join("");
  $("reportSkid").innerHTML='<option value="">All Skids</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
+}
+
+async function refreshReports(){
+ if(!admin())return;
+
+ const btn=event?.target;
+ if(btn){
+  btn.disabled=true;
+  btn.textContent="Refreshing...";
+ }
+
+ try{
+  await Promise.all([
+   loadSkids(),
+   loadWorkRecords(),
+   loadProfiles()
+  ]);
+
+  populateFilters();
+  renderReports();
+
+ }catch(err){
+  console.error("Report refresh failed:",err);
+  alert("Could not refresh reports: "+(err?.message||String(err)));
+
+ }finally{
+  if(btn){
+   btn.disabled=false;
+   btn.textContent="Refresh";
+  }
+ }
 }
 
 function reportRows(){
