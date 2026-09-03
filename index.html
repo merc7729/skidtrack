@@ -131,8 +131,8 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
     <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
    <div class="row">
-<div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
-<div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
+<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Select SO# and WT/Description"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+<div><label>WT/Description</label><select id="workWT" required onchange="updateSelectedSkidDisplay()"><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
@@ -1067,8 +1067,30 @@ function getSoFromSkidNumber(skidNumber){
  return skidSoNumber(skidNumber);
 }
 
+function updateSelectedSkidDisplay(){
+ const display=$("selectedSkidDisplay");
+ if(!display)return;
+
+ const so=$("workSO")?.value||"";
+ const wtValue=$("workWT")?.value||"";
+
+ if(!so || !wtValue){
+  display.value="";
+  return;
+ }
+
+ // WT values may be stored as either the WT code itself or "code | description".
+ const wtCode=String(wtValue).split("|")[0].trim();
+
+ // Prefer an actual skid already stored in Supabase whose skid number matches
+ // the selected WT code. Otherwise show the WT code as the selected skid reference.
+ const matchingSkid=allSkids.find(s=>String(s.skid_number||"").trim()===wtCode);
+ display.value=matchingSkid ? matchingSkid.skid_number : wtCode;
+}
+
 function populateWTForSelectedSO(){
  const so=$("workSO")?.value||"";
+ if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
  const wt=$("workWT");
  if(!wt)return;
 
@@ -1141,7 +1163,11 @@ async function saveWork(e){
  setStatus("workMessage","Saving...");
 
  const payload={
-  skid_id:null,
+  skid_id:(()=>{
+   const selected=String($("selectedSkidDisplay")?.value||"").trim();
+   const skid=allSkids.find(s=>String(s.skid_number||"").trim()===selected);
+   return skid?.id||null;
+  })(),
   technician_id:currentUser.id,
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:$("workWT")?.value||"Work logged",
