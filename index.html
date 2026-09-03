@@ -212,11 +212,15 @@ function addSkidPrefix(value){
  return v.startsWith("000000") ? v : "000"+v;
 }
 function skidSoNumber(value){
- const v=String(value||"").trim();
- let m=v.match(/^000(\d{7})-/);
- if(m)return m[1];
- m=v.match(/^(\d{7})-/);
- return m ? m[1] : "";
+ const raw=String(value||"").trim();
+
+ // Existing stored skid: 0007303-003-100 -> SO 0007303
+ // UI-prefixed skid:       0000007303-003-100 -> remove the added 000,
+ //                         then use the first 7 digits -> SO 0007303
+ const normalized=raw.startsWith("000000") ? raw.slice(3) : raw;
+ const digits=(normalized.match(/^\d+/)||[""])[0];
+
+ return digits.length>=7 ? digits.slice(0,7) : "";
 }
 
 const fmt=d=>d?new Date(d).toLocaleString():"";
