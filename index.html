@@ -205,6 +205,20 @@ let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null
 
 const $=x=>document.getElementById(x);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+
+function addSkidPrefix(value){
+ const v=String(value||"").trim();
+ if(!v)return "";
+ return v.startsWith("000000") ? v : "000"+v;
+}
+function skidSoNumber(value){
+ const v=String(value||"").trim();
+ let m=v.match(/^000(\d{7})-/);
+ if(m)return m[1];
+ m=v.match(/^(\d{7})-/);
+ return m ? m[1] : "";
+}
+
 const fmt=d=>d?new Date(d).toLocaleString():"";
 const admin=()=>currentProfile?.role==="admin";
 function formatRole(role){
@@ -524,7 +538,7 @@ async function loadSkids(){
  const {data,error}=await sb.from("skids").select("*").order("skid_number");
  if(error)console.error(error);allSkids=data||[];
  const previousSkid=$("workSkid").value;
- $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
+ $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(addSkidPrefix(s.skid_number))}</option>`).join("");
  if(previousSkid && allSkids.some(s=>String(s.id)===String(previousSkid)))$("workSkid").value=previousSkid;
  if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();
 }
@@ -552,7 +566,7 @@ function renderDashboard(){
 function renderSkids(){
  const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
  const rows=allSkids.filter(s=>[s.skid_number].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
- $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(addSkidPrefix(s.skid_number))}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
 }
 
 async function addSkid(e){
@@ -565,7 +579,7 @@ async function addSkid(e){
   .map(v=>v.trim())
   .filter(Boolean);
 
- const requested=[single,...bulk].filter(Boolean);
+ const requested=[single,...bulk].filter(Boolean).map(addSkidPrefix);
  const unique=[...new Set(requested.map(v=>v.toUpperCase()))];
 
  if(!unique.length){
@@ -636,7 +650,7 @@ function editSkid(id){
  if(!s)return alert("Skid not found.");
 
  openModal(`<h2>Edit Skid</h2>
-  <label>Skid Number</label><input id="mNum" value="${esc(s.skid_number)}">
+  <label>Skid Number</label><input id="mNum" value="${esc(addSkidPrefix(s.skid_number))}">
   <label>Status</label><select id="mStatus"><option>active</option><option>maintenance</option><option>out_of_service</option></select>
   <br><br><button type="button" class="success" onclick="saveSkidEdit('${id}')">Save</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
@@ -646,7 +660,7 @@ function editSkid(id){
 
 async function saveSkidEdit(id){
  const {error}=await sb.from("skids").update({
-  skid_number:$("mNum").value.trim(),
+  skid_number:addSkidPrefix($("mNum").value.trim()),
   status:$("mStatus").value
  }).eq("id",id);
 
@@ -1118,9 +1132,7 @@ function populateWorkNumberDropdowns(){
 }
 
 function getSoFromSkidNumber(skidNumber){
- const value=String(skidNumber||"").trim();
- const match=value.match(/^(\d{7})-/);
- return match ? match[1] : "";
+ return skidSoNumber(skidNumber);
 }
 
 function syncSoWtToSelectedSkid(){
@@ -1639,7 +1651,7 @@ async function restoreEmployee(id){
 function populateFilters(){
  if(!admin())return;
  $("reportEmployee").innerHTML='<option value="">All Employees</option>'+allProfiles.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join("");
- $("reportSkid").innerHTML='<option value="">All Skids</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
+ $("reportSkid").innerHTML='<option value="">All Skids</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(addSkidPrefix(s.skid_number))}</option>`).join("");
 }
 
 function reportRows(){
@@ -1752,7 +1764,7 @@ function handleQr(text){
  if(!n)n=text.trim();
  const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());
  if(!s)return alert("Skid not found: "+n);
- $("workSkid").value=s.id;if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
+ $("workSkid").value=s.id;if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+addSkidPrefix(s.skid_number),"success");stopScanner();
 }
 
 function openSkidFromUrl(){
