@@ -127,7 +127,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <h3>🔧 Service Record</h3>
   <form id="workForm">
    <div class="grid">
-    <div><label>Skid</label><select id="workSkid" required></select></div>
+    
     <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
    <div class="row">
@@ -536,10 +536,7 @@ function showPage(id){
 async function loadSkids(){
  const {data,error}=await sb.from("skids").select("*").order("skid_number");
  if(error)console.error(error);allSkids=data||[];
- const previousSkid=$("workSkid").value;
- $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
- if(previousSkid && allSkids.some(s=>String(s.id)===String(previousSkid)))$("workSkid").value=previousSkid;
- if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();
+
 }
 
 async function loadWorkRecords(){
@@ -813,7 +810,7 @@ async function stopWork(){
 
  setStatus(
   "workMessage",
-  "Timer stopped. Review Skid, SO#, WT/Description, hours, and notes, then click Save Work Record.",
+  "Timer stopped. Review SO#, WT/Description, hours, and notes, then click Save Work Record.",
   "success"
  );
 }
@@ -1053,10 +1050,6 @@ const wtNumbers=[
  ];
 
 function populateWorkNumberDropdowns(){
- if($("workSkid")){
-  $("workSkid").onchange=syncSoWtToSelectedSkid;
- }
-
  if($("workSO")){
   $("workSO").innerHTML='<option value="">Select a skid first</option>';
   $("workSO").disabled=true;
@@ -1072,6 +1065,17 @@ function populateWorkNumberDropdowns(){
 
 function getSoFromSkidNumber(skidNumber){
  return skidSoNumber(skidNumber);
+}
+
+function populateWTForSelectedSO(){
+ const so=$("workSO")?.value||"";
+ const wt=$("workWT");
+ if(!wt)return;
+
+ const matching=wtNumbers.filter(v=>v.so===so);
+ wt.innerHTML='<option value="">Select WT/Description</option>'+
+  matching.map(v=>`<option value="${esc(v.wt)}">${esc(v.wt)} - ${esc(v.description||"")}</option>`).join("");
+ wt.disabled=!so;
 }
 
 function syncSoWtToSelectedSkid(){
@@ -1130,10 +1134,6 @@ function syncSoWtToSelectedSkid(){
 async function saveWork(e){
  e.preventDefault();
 
- if(!$("workSkid").value){
-  return setStatus("workMessage","Select a skid before saving.","error");
- }
-
  if(!$("workWT") || !$("workWT").value){
   return setStatus("workMessage","Choose a WT/Description before saving the work record.","error");
  }
@@ -1141,7 +1141,7 @@ async function saveWork(e){
  setStatus("workMessage","Saving...");
 
  const payload={
-  skid_id:$("workSkid").value,
+  skid_id:null,
   technician_id:currentUser.id,
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:$("workWT")?.value||"Work logged",
