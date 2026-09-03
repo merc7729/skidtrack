@@ -516,7 +516,10 @@ function showPage(id){
 async function loadSkids(){
  const {data,error}=await sb.from("skids").select("*").order("skid_number");
  if(error)console.error(error);allSkids=data||[];
+ const previousSkid=$("workSkid").value;
  $("workSkid").innerHTML='<option value="">Select Skid</option>'+allSkids.map(s=>`<option value="${s.id}">${esc(s.skid_number)}</option>`).join("");
+ if(previousSkid && allSkids.some(s=>String(s.id)===String(previousSkid)))$("workSkid").value=previousSkid;
+ if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();
 }
 
 async function loadWorkRecords(){
@@ -1026,37 +1029,75 @@ const wtNumbers=[
  ];
 
 function populateWorkNumberDropdowns(){
- const soNumbers=["0007303","0007272","0007176","0007295"];
-
- if($("workSO")){
-  $("workSO").innerHTML=
-   '<option value="">Select SO#</option>'+
-   soNumbers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
-
-  $("workSO").onchange=filterWtBySO;
+ if($("workSkid")){
+  $("workSkid").onchange=syncSoWtToSelectedSkid;
  }
 
- filterWtBySO();
+ if($("workSO")){
+  $("workSO").innerHTML='<option value="">Select a skid first</option>';
+  $("workSO").disabled=true;
+ }
+
+ if($("workWT")){
+  $("workWT").innerHTML='<option value="">Select a skid first</option>';
+  $("workWT").disabled=true;
+ }
+
+ syncSoWtToSelectedSkid();
 }
 
-function filterWtBySO(){
- const selectedSO=$("workSO")?.value||"";
- const wt=$("workWT");
- if(!wt)return;
+function getSoFromSkidNumber(skidNumber){
+ const value=String(skidNumber||"").trim();
+ const match=value.match(/^(\\d{7})-/);
+ return match ? match[1] : "";
+}
 
- const matching=wtNumbers.filter(v=>v.so===selectedSO);
+function syncSoWtToSelectedSkid(){
+ const skidId=$("workSkid")?.value||"";
+ const selectedSkid=allSkids.find(s=>String(s.id)===String(skidId));
+ const skidNumber=selectedSkid?.skid_number||"";
+ const so=getSoFromSkidNumber(skidNumber);
 
- wt.innerHTML=
+ const soSelect=$("workSO");
+ const wtSelect=$("workWT");
+
+ if(!soSelect || !wtSelect)return;
+
+ if(!selectedSkid){
+  soSelect.innerHTML='<option value="">Select a skid first</option>';
+  soSelect.disabled=true;
+  wtSelect.innerHTML='<option value="">Select a skid first</option>';
+  wtSelect.disabled=true;
+  return;
+ }
+
+ if(!so){
+  soSelect.innerHTML='<option value="">No matching SO#</option>';
+  soSelect.disabled=true;
+  wtSelect.innerHTML='<option value="">No matching WT/Description</option>';
+  wtSelect.disabled=true;
+  return;
+ }
+
+ soSelect.innerHTML=`<option value="${esc(so)}">${esc(so)}</option>`;
+ soSelect.value=so;
+ soSelect.disabled=true;
+
+ const matching=wtNumbers.filter(v=>v.so===so);
+
+ if(!matching.length){
+  wtSelect.innerHTML=`<option value="">No WT/Description entries for SO# ${esc(so)}</option>`;
+  wtSelect.disabled=true;
+  return;
+ }
+
+ wtSelect.innerHTML=
   '<option value="">Select WT/Description</option>'+
   matching.map(v=>
    `<option value="${esc(v.code+" | "+v.description)}">${esc(v.code)} | ${esc(v.description)}</option>`
   ).join("");
 
- wt.disabled=!selectedSO || matching.length===0;
-
- if(selectedSO && matching.length===0){
-  wt.innerHTML='<option value="">No WT/Description entries for this SO#</option>';
- }
+ wtSelect.disabled=false;
 }
 
 async function saveWork(e){
@@ -1640,7 +1681,7 @@ function handleQr(text){
  if(!n)n=text.trim();
  const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());
  if(!s)return alert("Skid not found: "+n);
- $("workSkid").value=s.id;setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
+ $("workSkid").value=s.id;if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
 }
 
 function openSkidFromUrl(){
