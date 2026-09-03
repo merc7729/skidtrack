@@ -130,7 +130,11 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
     <div><label>Skid</label><select id="workSkid" required></select></div>
     <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
-   <label>Work Performed</label><textarea id="workPerformed" required></textarea>
+   <div class="row">
+<div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+<div><label>WT#</label><select id="workWT"><option value="">Select WT#</option></select></div>
+</div>
+<label>Work Performed</label><textarea id="workPerformed" required></textarea>
    <label>Notes</label><textarea id="workNotes"></textarea>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
    <button class="success">Save Work Record</button>
@@ -213,7 +217,7 @@ function formatRole(role){
 function setStatus(id,msg,type=""){const e=$(id);e.textContent=msg;e.className="status "+type}
 function setTimerStatus(msg,type=""){setStatus("timerMessage",msg,type)}
 
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded",()=>{populateWorkNumberDropdowns();
  $("loginForm").onsubmit=login;
  $("resetForm").onsubmit=resetPassword;
  $("workForm").onsubmit=saveWork;
@@ -728,7 +732,7 @@ async function stopWork(){
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:workPerformed,
   time_spent:Number(hours.toFixed(2)),
-  notes:$("workNotes").value.trim(),
+  notes:$("workNotes").value.trim(),so_number:$("workSO")?.value||null,wt_number:$("workWT")?.value||null,
   start_time:start.toISOString(),
   stop_time:stop.toISOString()
  };
@@ -779,6 +783,22 @@ async function stopWork(){
 
  await refreshAllData();
 }
+
+function populateWorkNumberDropdowns(){
+ // Edit these lists to match your actual SO# and WT# values.
+ const soNumbers=["SO-001","SO-002","SO-003","SO-004","SO-005"];
+ const wtNumbers=["WT-001","WT-002","WT-003","WT-004","WT-005"];
+
+ if($("workSO")){
+  $("workSO").innerHTML='<option value="">Select SO#</option>'+
+   soNumbers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+ }
+ if($("workWT")){
+  $("workWT").innerHTML='<option value="">Select WT#</option>'+
+   wtNumbers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+ }
+}
+
 async function saveWork(e){
  e.preventDefault();setStatus("workMessage","Saving...");
  const payload={
@@ -787,7 +807,7 @@ async function saveWork(e){
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
   work_performed:$("workPerformed").value.trim(),
   time_spent:Number($("timeSpent").value),
-  notes:$("workNotes").value.trim(),
+  notes:$("workNotes").value.trim(),so_number:$("workSO")?.value||null,wt_number:$("workWT")?.value||null,
   start_time:window.pendingStartTime||null,
   stop_time:window.pendingStopTime||null
  };
