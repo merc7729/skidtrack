@@ -132,7 +132,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    </div>
    <div class="row">
 <div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
-<div><label>WT#</label><select id="workWT"><option value="">Select WT#</option></select></div>
+<div><label>WT/Description</label><select id="workWT"><option value="">Select WT/Description</option></select></div>
 </div>
 <label>Work Performed</label><textarea id="workPerformed" required></textarea>
    <label>Notes</label><textarea id="workNotes"></textarea>
@@ -794,7 +794,7 @@ function populateWorkNumberDropdowns(){
    soNumbers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
  }
  if($("workWT")){
-  $("workWT").innerHTML='<option value="">Select WT#</option>'+
+  $("workWT").innerHTML='<option value="">Select WT/Description</option>'+
    wtNumbers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
  }
 }
