@@ -56,12 +56,42 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
    <br><br><button class="success">Sign In</button>
   </form>
   <p style="text-align:center;margin:14px 0 0">
-   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button>
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button> <button type="button" class="secondary small" onclick="showSignup()">Create Account</button>
   </p>
   <div id="loginMessage" class="status"></div>
  </div>
 </div>
 
+
+
+<div id="signupScreen" class="hidden">
+ <div class="login">
+  <div class="logo">💧</div>
+  <h1>Create Account</h1>
+  <p class="muted" style="text-align:center">Create your SkidTrack employee account</p>
+  <form id="signupForm">
+   <label>Full Name</label>
+   <input id="signupName" type="text" autocomplete="name" required>
+
+   <label>Username</label>
+   <input id="signupUsername" type="text" autocomplete="username" minlength="3" maxlength="40" required>
+
+   <label>Email</label>
+   <input id="signupEmail" type="email" autocomplete="email" required>
+
+   <label>Password</label>
+   <input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required>
+
+   <label>Confirm Password</label>
+   <input id="signupPasswordConfirm" type="password" autocomplete="new-password" minlength="6" required>
+
+   <br><br>
+   <button class="success" type="submit">Create Account</button>
+   <button class="secondary" type="button" onclick="showLogin()">Back to Login</button>
+  </form>
+  <div id="signupMessage" class="status"></div>
+ </div>
+</div>
 
 <div id="resetScreen" class="hidden"><div class="login"><div class="logo">🔐</div><h1>Reset Password</h1>
 <p class="muted" style="text-align:center">Choose a new password.</p>
@@ -198,6 +228,7 @@ function setTimerStatus(msg,type=""){setStatus("timerMessage",msg,type)}
 
 document.addEventListener("DOMContentLoaded",()=>{
  $("loginForm").onsubmit=login;
+ $("signupForm").onsubmit=signup;
  $("resetForm").onsubmit=resetPassword;
  $("workForm").onsubmit=saveWork;
  $("skidForm").onsubmit=addSkid;
@@ -280,6 +311,72 @@ async function checkSession(){
  }else{
   showLogin();
  }
+}
+
+
+async function signup(e){
+ e.preventDefault();
+
+ const fullName=$("signupName").value.trim();
+ const username=$("signupUsername").value.trim().toLowerCase();
+ const email=$("signupEmail").value.trim().toLowerCase();
+ const password=$("signupPassword").value;
+ const confirmPassword=$("signupPasswordConfirm").value;
+
+ if(!/^[a-z0-9._-]{3,40}$/.test(username)){
+  return setStatus(
+   "signupMessage",
+   "Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.",
+   "error"
+  );
+ }
+
+ if(password!==confirmPassword){
+  return setStatus("signupMessage","Passwords do not match.","error");
+ }
+
+ setStatus("signupMessage","Creating account...");
+
+ /*
+  Supabase Auth still uses email/password internally.
+  username and full_name are passed to user metadata so the
+  public.handle_new_user() trigger can create the profile.
+ */
+ const {data,error}=await sb.auth.signUp({
+  email,
+  password,
+  options:{
+   emailRedirectTo:typeof APP_URL!=="undefined" ? APP_URL : (location.origin+location.pathname),
+   data:{
+    full_name:fullName,
+    username:username
+   }
+  }
+ });
+
+ if(error){
+  console.error(error);
+  return setStatus("signupMessage",error.message,"error");
+ }
+
+ if(data.user && !data.session){
+  e.target.reset();
+  return setStatus(
+   "signupMessage",
+   "Account created. Check your email to confirm the account, then sign in with your username.",
+   "success"
+  );
+ }
+
+ if(data.session){
+  currentUser=data.user;
+  e.target.reset();
+  setStatus("signupMessage","Account created successfully.","success");
+  await openApplication();
+  return;
+ }
+
+ setStatus("signupMessage","Account created. You can now sign in.","success");
 }
 
 async function login(e){
