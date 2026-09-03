@@ -214,13 +214,15 @@ function addSkidPrefix(value){
 function skidSoNumber(value){
  const raw=String(value||"").trim();
 
- // Existing stored skid: 0007303-003-100 -> SO 0007303
- // UI-prefixed skid:       0000007303-003-100 -> remove the added 000,
- //                         then use the first 7 digits -> SO 0007303
- const normalized=raw.startsWith("000000") ? raw.slice(3) : raw;
- const digits=(normalized.match(/^\d+/)||[""])[0];
+ // Match one of the known SO numbers anywhere in the selected skid number.
+ // This supports both legacy skid numbers like:
+ //   0007303-003-100
+ // and prefixed skid numbers like:
+ //   0000007303-003-100
+ const knownSOs=["0007303","0007272","0007176","0007295"];
 
- return digits.length>=7 ? digits.slice(0,7) : "";
+ const match=knownSOs.find(so=>raw.includes(so));
+ return match||"";
 }
 
 const fmt=d=>d?new Date(d).toLocaleString():"";
@@ -1144,6 +1146,11 @@ function syncSoWtToSelectedSkid(){
  const selectedSkid=allSkids.find(s=>String(s.id)===String(skidId));
  const skidNumber=selectedSkid?.skid_number||"";
  const so=getSoFromSkidNumber(skidNumber);
+
+ console.log("SkidTrack SO match:",{
+  skidNumber,
+  matchedSO:so
+ });
 
  const soSelect=$("workSO");
  const wtSelect=$("workWT");
