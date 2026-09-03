@@ -1783,38 +1783,68 @@ async function stopScanner(){
 
 function matchSoAndWtToSkidNumber(skidNumber){
  const number=String(skidNumber||"").trim();
- const so=getSoFromSkidNumber(number);
+ const skidDigits=number.replace(/\D/g,"");
+ const skidFirst4=skidDigits.slice(0,4);
 
- if($("workSO")){
-  $("workSO").value=so;
+ const soSelect=$("workSO");
+ const wt=$("workWT");
+
+ if(!skidFirst4){
+  if(soSelect)soSelect.value="";
+  if(wt){
+   wt.innerHTML='<option value="">Select WT/Description</option>';
+   wt.disabled=true;
+  }
+  return;
  }
 
- const wt=$("workWT");
- if(!wt)return;
+ // Find the SO# whose LAST 4 digits equal the skid's FIRST 4 digits.
+ const matchedSO=[...new Set(wtNumbers.map(v=>String(v.so||"").trim()))]
+  .find(so=>{
+   const soDigits=so.replace(/\D/g,"");
+   return soDigits.slice(-4)===skidFirst4;
+  });
 
- // Only show WT entries belonging to the skid's SO#.
- const matching=wtNumbers.filter(v=>String(v.so||"").trim()===so);
+ if(!matchedSO){
+  if(soSelect)soSelect.value="";
+  if(wt){
+   wt.innerHTML='<option value="">No matching WT/Description</option>';
+   wt.disabled=true;
+  }
 
- wt.innerHTML='<option value="">Select WT/Description</option>'+
-  matching.map(v=>{
-   const value=String(v.code||"")+" | "+String(v.description||"");
-   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
-  }).join("");
+  setStatus(
+   "workMessage",
+   "No SO# found whose last 4 digits match skid first 4 digits "+skidFirst4+".",
+   "error"
+  );
+  return;
+ }
 
- wt.disabled=!so;
+ // Set the matched SO#.
+ if(soSelect){
+  soSelect.value=matchedSO;
+ }
 
- // If the skid number itself is a WT code, automatically select that exact WT/Description.
- const exact=matching.find(v=>
-  String(v.code||"").trim().toLowerCase()===number.toLowerCase()
+ // WT/Description must belong to the SAME matched SO#.
+ const matchingWT=wtNumbers.filter(v=>
+  String(v.so||"").trim()===matchedSO
  );
 
- if(exact){
-  wt.value=String(exact.code||"")+" | "+String(exact.description||"");
-  setStatus("workMessage","✓ Skid, SO# and WT/Description matched.","success");
- }else{
-  wt.value="";
-  setStatus("workMessage","Skid matched SO# "+so+", but no exact WT/Description was found for "+number+".","error");
+ if(wt){
+  wt.innerHTML='<option value="">Select WT/Description</option>'+
+   matchingWT.map(v=>{
+    const value=String(v.code||"")+" | "+String(v.description||"");
+    return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+   }).join("");
+
+  wt.disabled=matchingWT.length===0;
  }
+
+ setStatus(
+  "workMessage",
+  "✓ Skid "+number+" matched SO# "+matchedSO+" using "+skidFirst4+". Select the matching WT/Description.",
+  "success"
+ );
 }
 
 function handleQr(text){
@@ -1834,33 +1864,21 @@ function handleQr(text){
  const display=$("selectedSkidDisplay");
  const idField=$("selectedSkidId");
 
- // Display exactly the skid number read from the QR.
+ // Always display the actual QR skid number.
  if(display)display.value=qrSkidNumber;
 
- // Find the actual skid record in Supabase.
+ // Resolve the actual skid record when it exists.
  const skid=allSkids.find(s=>
   String(s.skid_number||"").trim().toLowerCase()===
   qrSkidNumber.toLowerCase()
  );
 
- if(!skid){
-  if(idField)idField.value="";
-  matchSoAndWtToSkidNumber(qrSkidNumber);
-  setStatus(
-   "workMessage",
-   "QR skid number loaded, but this skid is not in the Skids database.",
-   "error"
-  );
-  stopScanner();
-  return;
- }
+ if(idField)idField.value=skid ? String(skid.id||"") : "";
 
- if(idField)idField.value=String(skid.id||"");
-
- // SO# = first 7 digits of skid number.
- // WT/Description = exact WT code matching the full skid number.
+ // Match SO# and WT/Description using the last 4 digits.
  matchSoAndWtToSkidNumber(qrSkidNumber);
 
+ // Keep the scanned number visible after matching.
  if(display)display.value=qrSkidNumber;
 
  stopScanner();
