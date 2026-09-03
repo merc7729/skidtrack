@@ -1048,7 +1048,7 @@ function populateWorkNumberDropdowns(){
 
 function getSoFromSkidNumber(skidNumber){
  const value=String(skidNumber||"").trim();
- const match=value.match(/^(\\d{7})-/);
+ const match=value.match(/^(\d{7})-/);
  return match ? match[1] : "";
 }
 
