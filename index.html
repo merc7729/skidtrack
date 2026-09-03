@@ -215,18 +215,52 @@ function showLogin(){
 }
 
 async function checkSession(){
- const hash=new URLSearchParams(location.hash.replace(/^#/,""));
- const query=new URLSearchParams(location.search);
+ // Supabase emits PASSWORD_RECOVERY only after the recovery link has
+ // been exchanged for a valid session. Show the reset form at that point.
+ sb.auth.onAuthStateChange(async (event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+   currentUser=session?.user||null;
+   hideAuthScreens();
+   $("appScreen").classList.add("hidden");
+   $("resetScreen").classList.remove("hidden");
+   setStatus("resetMessage","Recovery link verified. Enter a new password.","success");
+   return;
+  }
 
- if(hash.get("type")==="recovery" || query.get("type")==="recovery"){
-  hideAuthScreens();
-  $("appScreen").classList.add("hidden");
-  $("resetScreen").classList.remove("hidden");
-  return;
- }
+  if(event==="SIGNED_OUT"){
+   currentUser=null;
+   currentProfile=null;
+   showLogin();
+  }
+ });
 
  const {data:{session},error}=await sb.auth.getSession();
  if(error)console.error("Session error:",error);
+
+ // For a recovery callback, allow Supabase to finish processing the URL.
+ // The PASSWORD_RECOVERY event above will open the reset form.
+ const hash=new URLSearchParams(location.hash.replace(/^#/,""));
+ const query=new URLSearchParams(location.search);
+ const recoveryCallback=
+  hash.get("type")==="recovery" ||
+  query.get("type")==="recovery" ||
+  query.has("code");
+
+ if(recoveryCallback){
+  if(session){
+   currentUser=session.user;
+   hideAuthScreens();
+   $("appScreen").classList.add("hidden");
+   $("resetScreen").classList.remove("hidden");
+   setStatus("resetMessage","Recovery link verified. Enter a new password.","success");
+  }else{
+   hideAuthScreens();
+   $("appScreen").classList.add("hidden");
+   $("resetScreen").classList.remove("hidden");
+   setStatus("resetMessage","Verifying recovery link...","");
+  }
+  return;
+ }
 
  if(session){
   currentUser=session.user;
@@ -286,51 +320,85 @@ async function forgotPassword(){
  const cleanUsername=username.trim();
  if(!cleanUsername)return alert("Please enter your username.");
 
- setStatus("loginMessage","Preparing password reset...");
+ setStatus("loginMessage","Looking up account...");
 
  const {data:loginEmail,error:lookupError}=await sb.rpc(
   "get_login_email",
   {p_username:cleanUsername}
  );
 
- // Do not reveal whether the username exists.
- if(lookupError || !loginEmail){
-  setStatus(
+ if(lookupError){
+  console.error("Password reset username lookup error:",lookupError);
+  return setStatus(
    "loginMessage",
-   "If the username exists, password reset instructions will be sent.",
+   "Password reset is not configured correctly. Check the get_login_email function in Supabase.",
+   "error"
+  );
+ }
+
+ // Keep the account response generic while still allowing Supabase to send
+ // the actual recovery message to the matching Auth email address.
+ if(!loginEmail){
+  return setStatus(
+   "loginMessage",
+   "If that username exists, password reset instructions will be sent.",
    "success"
   );
-  return;
  }
 
  const redirectTo=location.origin+location.pathname;
+ setStatus("loginMessage","Sending password reset email...");
 
- const {error}=await sb.auth.resetPasswordForEmail(loginEmail,{
-  redirectTo
- });
+ const {error}=await sb.auth.resetPasswordForEmail(loginEmail,{redirectTo});
 
  if(error){
-  console.error(error);
-  return setStatus("loginMessage",error.message,"error");
+  console.error("Password reset email error:",error);
+  return setStatus("loginMessage","Could not send reset email: "+error.message,"error");
  }
 
  setStatus(
   "loginMessage",
-  "If the username exists, password reset instructions have been sent.",
+  "Password reset email sent. Open the link in that email to choose a new password.",
   "success"
  );
 }
 
 async function resetPassword(e){
  e.preventDefault();
+
  const password=$("resetPassword").value;
- if(password!==$("resetPasswordConfirm").value)return setStatus("resetMessage","Passwords do not match.","error");
+ const confirmPassword=$("resetPasswordConfirm").value;
+
+ if(password.length<6){
+  return setStatus("resetMessage","Password must be at least 6 characters.","error");
+ }
+ if(password!==confirmPassword){
+  return setStatus("resetMessage","Passwords do not match.","error");
+ }
+
  setStatus("resetMessage","Updating password...");
+
+ // Confirm that the recovery link produced an authenticated session.
+ const {data:{session},error:sessionError}=await sb.auth.getSession();
+ if(sessionError){
+  console.error("Recovery session error:",sessionError);
+  return setStatus("resetMessage","Could not verify the recovery session. Open a new reset link from your email.","error");
+ }
+ if(!session){
+  return setStatus("resetMessage","Recovery session is missing or expired. Request a new password reset email.","error");
+ }
+
  const {error}=await sb.auth.updateUser({password});
- if(error)return setStatus("resetMessage",error.message,"error");
+ if(error){
+  console.error("Password update error:",error);
+  return setStatus("resetMessage",error.message,"error");
+ }
+
+ await sb.auth.signOut();
  history.replaceState({},document.title,location.pathname);
- setStatus("resetMessage","Password updated successfully. You can now sign in.","success");
- setTimeout(showLogin,1200);
+ $("resetForm").reset();
+ showLogin();
+ setStatus("loginMessage","Password updated successfully. Sign in with your username and new password.","success");
 }
 async function logout(){await stopScanner();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
 
