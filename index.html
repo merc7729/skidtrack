@@ -1081,10 +1081,13 @@ function updateSelectedSkidDisplay(skid){
   return;
  }
 
- display.value=skid.skid_number||"";
- idField.value=skid.id||"";
+ // Show the actual skid number encoded by / resolved from the QR.
+ display.value=String(skid.skid_number||"").trim();
+ idField.value=String(skid.id||"");
 
+ // Drive SO# from the scanned skid's first 7 digits.
  const so=getSoFromSkidNumber(skid.skid_number||"");
+
  if($("workSO")){
   $("workSO").value=so;
   populateWTForSelectedSO();
@@ -1786,12 +1789,37 @@ async function stopScanner(){
 }
 
 function handleQr(text){
- let n="";
- try{n=new URL(text).searchParams.get("skid")||""}catch(e){n=text.replace(/^SKID:/i,"").trim()}
- if(!n)n=text.trim();
- const s=allSkids.find(x=>String(x.skid_number).toLowerCase()===n.toLowerCase());
- if(!s)return alert("Skid not found: "+n);
- updateSelectedSkidDisplay(s);if(typeof syncSoWtToSelectedSkid==="function")syncSoWtToSelectedSkid();setStatus("workMessage","✓ Selected skid: "+s.skid_number,"success");stopScanner();
+ let scanned="";
+
+ try{
+  const url=new URL(text);
+  scanned=url.searchParams.get("skid")||"";
+ }catch(e){
+  scanned=String(text||"").replace(/^SKID:/i,"").trim();
+ }
+
+ if(!scanned)scanned=String(text||"").trim();
+
+ const normalized=scanned.toLowerCase();
+
+ const skid=allSkids.find(s=>
+  String(s.skid_number||"").trim().toLowerCase()===normalized
+ );
+
+ if(!skid){
+  alert("Skid not found: "+scanned);
+  return;
+ }
+
+ updateSelectedSkidDisplay(skid);
+
+ setStatus(
+  "workMessage",
+  "✓ Selected skid: "+skid.skid_number,
+  "success"
+ );
+
+ stopScanner();
 }
 
 function openSkidFromUrl(){
