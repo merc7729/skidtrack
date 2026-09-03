@@ -134,7 +134,6 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 <div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
 <div><label>WT/Description</label><select id="workWT"><option value="">Select WT/Description</option></select></div>
 </div>
-<label>Work Performed</label><textarea id="workPerformed" required></textarea>
    <label>Notes</label><textarea id="workNotes"></textarea>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
    <button class="success">Save Work Record</button>
@@ -1106,7 +1105,7 @@ async function saveWork(e){
   skid_id:$("workSkid").value,
   technician_id:currentUser.id,
   technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
-  work_performed:$("workPerformed").value.trim(),
+  work_performed:$("workWT")?.value||"Work logged",
   time_spent:Number($("timeSpent").value),
   notes:$("workNotes").value.trim(),so_number:$("workSO")?.value||null,wt_number:$("workWT")?.value||null,
   start_time:window.pendingStartTime||null,
