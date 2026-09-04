@@ -1901,13 +1901,19 @@ function monSatRows(){
   if(isNaN(when) || when < monday || when >= saturday)return;
 
   const employee=r.profiles?.full_name||r.technician_name||"Former Employee";
-  const wt=wtDescriptionOnly(r.wt_description||r.wt||r.work_performed||"");
-  const key=employee+"||"+wt;
+
+  // Preserve the original stored WT value so CSV can export the WT code.
+  const rawWt=String(r.wt_number||r.wt_description||r.wt||r.work_performed||"").trim();
+  const wtCode=wtNumberOnly(rawWt);
+  const wtDescription=wtDescriptionOnly(rawWt);
+
+  const key=employee+"||"+wtCode+"||"+wtDescription;
 
   if(!groups.has(key)){
    groups.set(key,{
     employee,
-    wt,
+    wtCode,
+    wtDescription,
     days:[0,0,0,0,0]
    });
   }
@@ -1921,7 +1927,7 @@ function monSatRows(){
 
  return [...groups.values()].sort((a,b)=>
   a.employee.localeCompare(b.employee) ||
-  a.wt.localeCompare(b.wt)
+  a.wtCode.localeCompare(b.wtCode)
  );
 }
 
@@ -1941,7 +1947,7 @@ function showMonSatReport(){
 
  const sections=[...byEmployee.entries()].map(([employee,items])=>{
   const body=items.map(r=>`<tr>
-   <td>${esc(wtDescriptionOnly(r.wt))}</td>
+   <td>${esc(r.wtDescription)}</td>
    ${r.days.map(h=>`<td>${Number(h).toFixed(2)}</td>`).join("")}
   </tr>`).join("");
 
@@ -1999,7 +2005,7 @@ function exportMonSatReportCSV(){
 
   items.forEach(r=>{
    csvRows.push([
-    wtNumberOnly(r.wt),
+    r.wtCode,
     ...r.days.map(h=>Number(h).toFixed(2))
    ]);
   });
