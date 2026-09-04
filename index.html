@@ -571,6 +571,14 @@ function renderDashboard(){
  $("recentActivity").innerHTML=allWorkRecords.slice(0,8).map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No work records yet.</td></tr>';
 }
 
+function cleanSelectedSkid(value){
+ return String(value||"")
+  .trim()
+  .replace(/\s+/g," ")
+  .replace(/\s*\/\s*/g,"/")
+  .replace(/\s*-\s*/g,"-");
+}
+
 function cleanSkidDescription(value){
  return String(value||"")
   .trim()
@@ -1327,7 +1335,7 @@ async function saveWork(e){
  window.pendingStopTime=null;
  clearTimer();
  $("timeSpent").value="0.00";
- if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
+ if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=cleanSelectedSkid("");
  if($("selectedSkidId"))$("selectedSkidId").value="";
  if($("workSkidSelect"))$("workSkidSelect").value="";
  if($("workSO")){
@@ -1968,7 +1976,7 @@ function matchSoAndWtToSkidNumber(skidNumber){
   }
 
   if($("selectedSkidDisplay")){
-   $("selectedSkidDisplay").value=number;
+   $("selectedSkidDisplay").value=cleanSelectedSkid(number);
   }
 
   populateWTForSelectedSO();
@@ -2056,7 +2064,7 @@ function manualSkidSelected(){
  const skid=allSkids.find(s=>String(s.id)===String(id));
 
  if(!skid){
-  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
+  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=cleanSelectedSkid("");
   if($("selectedSkidId"))$("selectedSkidId").value="";
   if($("workSO")){
    $("workSO").innerHTML='<option value="">Select SO#</option>';
@@ -2070,7 +2078,7 @@ function manualSkidSelected(){
   return;
  }
 
- if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=skid.skid_number||"";
+ if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=cleanSelectedSkid(skid.skid_number||"");
  if($("selectedSkidId"))$("selectedSkidId").value=skid.id||"";
 
  if(!populateWtForAssignedSkid(skid)){
