@@ -1931,6 +1931,8 @@ function showMonSatReport(){
  const friday=new Date(monday);
  friday.setDate(monday.getDate()+4);
 
+ const weekOf=`${monday.toLocaleDateString()} - ${friday.toLocaleDateString()}`;
+
  const byEmployee=new Map();
  rows.forEach(r=>{
   if(!byEmployee.has(r.employee))byEmployee.set(r.employee,[]);
@@ -1939,15 +1941,15 @@ function showMonSatReport(){
 
  const sections=[...byEmployee.entries()].map(([employee,items])=>{
   const body=items.map(r=>`<tr>
-   <td>${esc(r.wt)}</td>
+   <td>${esc(wtNumberOnly(r.wt))}</td>
    ${r.days.map(h=>`<td>${Number(h).toFixed(2)}</td>`).join("")}
   </tr>`).join("");
 
-  return `<h3 style="margin-top:22px">Employee: ${esc(employee)}</h3>
+  return `<h3 style="margin-top:22px">Employee: ${esc(employee)} &nbsp; | &nbsp; Week Of: ${esc(weekOf)}</h3>
    <div class="table-wrap">
     <table>
      <thead><tr>
-      <th>WT/Description</th>
+      <th>WT</th>
       <th>Monday</th>
       <th>Tuesday</th>
       <th>Wednesday</th>
