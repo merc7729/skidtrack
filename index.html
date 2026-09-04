@@ -2809,6 +2809,425 @@ tbody tr:last-child td{border-bottom:0}
  .table-wrap{border-radius:12px}
 }
 
+
+/* ===== SkidTracker Modern Theme 2.0 ===== */
+:root{
+ --st-bg:#07111b;
+ --st-bg-2:#0d1722;
+ --st-surface:#0f1c29;
+ --st-surface-2:#132434;
+ --st-card:#f7fbff;
+ --st-card-2:#ffffff;
+ --st-text:#13202d;
+ --st-text-soft:#5d6d7d;
+ --st-line:#d7e2ec;
+ --st-blue:#0f9fe8;
+ --st-blue-2:#0878c9;
+ --st-cyan:#22c7f2;
+ --st-green:#1ab977;
+ --st-yellow:#eba12b;
+ --st-red:#e15555;
+ --st-shadow-lg:0 28px 70px rgba(4,16,28,.18);
+ --st-shadow-md:0 14px 34px rgba(4,16,28,.12);
+ --st-radius-xl:24px;
+ --st-radius-lg:18px;
+ --st-radius-md:13px;
+}
+
+body{
+ background:
+   radial-gradient(circle at 10% 0%,rgba(15,159,232,.16),transparent 24%),
+   radial-gradient(circle at 90% 10%,rgba(34,199,242,.10),transparent 28%),
+   linear-gradient(180deg,#eef7fc 0%,#f7fbfd 32%,#eef4f8 100%);
+}
+
+body:before{
+ content:"";
+ position:fixed;
+ inset:0;
+ pointer-events:none;
+ background:
+  linear-gradient(rgba(255,255,255,.32) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.24) 1px,transparent 1px);
+ background-size:42px 42px;
+ mask-image:linear-gradient(to bottom,rgba(0,0,0,.22),transparent 48%);
+ opacity:.28;
+}
+
+header{
+ min-height:92px;
+ padding:12px 26px;
+ background:
+  linear-gradient(135deg,rgba(7,17,27,.98),rgba(12,31,47,.96));
+ border-bottom:1px solid rgba(79,178,231,.20);
+ box-shadow:0 18px 42px rgba(1,9,16,.28);
+}
+
+header:after{
+ content:"";
+ position:absolute;
+ left:0;
+ right:0;
+ bottom:0;
+ height:2px;
+ background:linear-gradient(90deg,transparent,var(--st-blue),var(--st-cyan),transparent);
+ opacity:.75;
+}
+
+header .skidtracker-logo{
+ width:275px;
+ height:74px;
+ padding:4px 0;
+ filter:drop-shadow(0 8px 18px rgba(0,0,0,.22));
+}
+
+header .actions{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ padding:8px 10px;
+ border:1px solid rgba(255,255,255,.08);
+ background:rgba(255,255,255,.05);
+ border-radius:14px;
+ backdrop-filter:blur(14px);
+}
+
+#employeeName{
+ font-weight:800;
+ letter-spacing:.01em;
+}
+
+.role{
+ background:linear-gradient(135deg,rgba(15,159,232,.20),rgba(34,199,242,.12));
+ border:1px solid rgba(64,195,255,.28);
+ color:#c9efff;
+}
+
+.container{
+ width:min(1500px,calc(100% - 36px));
+ margin:24px auto 56px;
+}
+
+nav{
+ top:106px;
+ padding:8px;
+ border-radius:18px;
+ background:rgba(8,18,28,.92);
+ border:1px solid rgba(68,144,186,.22);
+ box-shadow:0 16px 42px rgba(5,15,24,.20);
+ backdrop-filter:blur(20px);
+}
+
+nav button{
+ color:#b9c9d7;
+ padding:11px 16px;
+ border-radius:12px;
+ font-size:13px;
+ letter-spacing:.015em;
+}
+
+nav button:hover{
+ background:rgba(15,159,232,.13);
+ color:#f4fbff;
+ transform:none;
+}
+
+nav button.active{
+ position:relative;
+ background:linear-gradient(135deg,#119fe8,#0c78c6);
+ box-shadow:
+   0 8px 20px rgba(15,159,232,.30),
+   inset 0 1px rgba(255,255,255,.20);
+ color:#fff;
+}
+
+nav button.active:after{
+ content:"";
+ position:absolute;
+ left:20%;
+ right:20%;
+ bottom:-8px;
+ height:2px;
+ border-radius:999px;
+ background:#5cd7ff;
+ box-shadow:0 0 16px rgba(92,215,255,.75);
+}
+
+.page.active>.top{
+ margin-bottom:18px;
+}
+
+h2{
+ font-size:clamp(26px,3vw,38px);
+ font-weight:850;
+ background:linear-gradient(90deg,#112334,#0d6fae);
+ -webkit-background-clip:text;
+ background-clip:text;
+ color:transparent;
+}
+
+.card{
+ position:relative;
+ overflow:hidden;
+ background:
+   linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,251,255,.98));
+ border:1px solid rgba(188,207,223,.78);
+ border-radius:var(--st-radius-xl);
+ box-shadow:var(--st-shadow-md);
+ padding:22px;
+}
+
+.card:before{
+ content:"";
+ position:absolute;
+ left:0;
+ top:0;
+ right:0;
+ height:3px;
+ background:linear-gradient(90deg,var(--st-blue),var(--st-cyan),transparent 70%);
+ opacity:.85;
+}
+
+.grid>.card{
+ min-height:132px;
+}
+
+.grid>.card h3{
+ color:#5b6e80;
+ font-size:13px;
+ text-transform:uppercase;
+ letter-spacing:.075em;
+ margin-bottom:16px;
+}
+
+.stat{
+ font-size:40px;
+ font-weight:900;
+ line-height:.95;
+ background:linear-gradient(135deg,var(--st-blue-2),var(--st-blue),var(--st-cyan));
+ -webkit-background-clip:text;
+ background-clip:text;
+ color:transparent;
+}
+
+label{
+ font-size:11px;
+ letter-spacing:.09em;
+ color:#627486;
+}
+
+input,select,textarea{
+ min-height:48px;
+ border-radius:13px;
+ border:1px solid #c8d7e4;
+ background:rgba(255,255,255,.96);
+ box-shadow:
+  inset 0 1px 2px rgba(10,30,45,.03),
+  0 1px 0 rgba(255,255,255,.9);
+}
+
+input:hover,select:hover,textarea:hover{
+ border-color:#a8c1d4;
+}
+
+input:focus,select:focus,textarea:focus{
+ border-color:#189fe3;
+ box-shadow:
+  0 0 0 4px rgba(15,159,232,.11),
+  0 8px 22px rgba(15,159,232,.07);
+}
+
+button{
+ min-height:42px;
+ border-radius:12px;
+ background:linear-gradient(135deg,#139fe8,#0875c5);
+ box-shadow:
+   0 9px 20px rgba(8,117,197,.24),
+   inset 0 1px rgba(255,255,255,.22);
+}
+
+button:hover:not(:disabled){
+ transform:translateY(-1px) scale(1.01);
+}
+
+button.secondary{
+ background:#e9f0f5;
+ color:#33495b;
+ border:1px solid #d0dde7;
+}
+
+button.success{
+ background:linear-gradient(135deg,#1fc07c,#12935d);
+}
+
+button.warning{
+ background:linear-gradient(135deg,#efaa35,#cb7e0b);
+}
+
+button.danger{
+ background:linear-gradient(135deg,#ed6262,#c93f3f);
+}
+
+.table-wrap{
+ border-radius:18px;
+ border:1px solid #d6e3ed;
+ box-shadow:0 10px 26px rgba(7,25,39,.07);
+}
+
+table{
+ background:#fff;
+}
+
+thead th{
+ padding:14px 16px;
+ background:
+  linear-gradient(180deg,#edf6fb,#e7f1f7);
+ color:#436075;
+ border-bottom:1px solid #cddde8;
+}
+
+tbody td{
+ padding:15px 16px;
+}
+
+tbody tr{
+ transition:.14s ease;
+}
+
+tbody tr:hover{
+ background:linear-gradient(90deg,#f6fbff,#eef8fd);
+}
+
+tbody tr:hover td:first-child{
+ box-shadow:inset 3px 0 0 var(--st-blue);
+}
+
+.badge{
+ min-width:72px;
+ justify-content:center;
+ border:1px solid transparent;
+}
+
+.badge.active{
+ background:#e7f8f1;
+ border-color:#c7ead9;
+ color:#0d7950;
+}
+
+.badge.complete{
+ background:#e8f4fd;
+ border-color:#c8e0f4;
+ color:#0d6ea9;
+}
+
+.login{
+ margin:5vh auto;
+ max-width:560px;
+ border-radius:28px;
+ padding:32px;
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.985),rgba(248,252,255,.985));
+ box-shadow:0 34px 90px rgba(3,16,27,.24);
+ border:1px solid rgba(196,215,229,.92);
+}
+
+.login:before{
+ content:"";
+ display:block;
+ width:72px;
+ height:4px;
+ border-radius:99px;
+ background:linear-gradient(90deg,var(--st-blue),var(--st-cyan));
+ margin:-10px auto 18px;
+ box-shadow:0 0 24px rgba(15,159,232,.35);
+}
+
+.login .skidtracker-logo{
+ max-width:470px;
+ max-height:205px;
+ margin-bottom:12px;
+}
+
+#reader{
+ border:1px solid rgba(39,151,211,.35);
+ background:
+  linear-gradient(180deg,#f4fbff,#edf7fc);
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);
+}
+
+#timerDisplay{
+ border-radius:22px;
+ background:
+  radial-gradient(circle at 50% 0%,rgba(34,199,242,.12),transparent 60%),
+  linear-gradient(180deg,#eaf8ff,#e3f3fb);
+ border:1px solid #bfdfee;
+ box-shadow:
+  inset 0 1px rgba(255,255,255,.9),
+  0 12px 30px rgba(8,117,197,.08);
+ font-size:clamp(42px,7vw,64px);
+}
+
+.modal{
+ backdrop-filter:blur(10px);
+ background:rgba(3,12,20,.56)!important;
+}
+
+.modal-content{
+ border-radius:26px!important;
+ border:1px solid rgba(190,210,224,.92)!important;
+ box-shadow:0 42px 100px rgba(1,9,17,.38)!important;
+}
+
+#work .card,
+#history .card,
+#reports .card,
+#skids .card,
+#employees .card{
+ backdrop-filter:blur(10px);
+}
+
+@media(max-width:900px){
+ nav{
+  top:auto;
+  padding:7px;
+  border-radius:15px;
+ }
+ .container{width:min(100% - 20px,1500px)}
+ .card{border-radius:19px;padding:18px}
+ header .skidtracker-logo{width:230px;height:66px}
+}
+
+@media(max-width:640px){
+ header{
+  border-radius:0 0 20px 20px;
+  padding:10px 14px 14px;
+ }
+ header .actions{
+  width:100%;
+  justify-content:space-between;
+ }
+ nav{
+  margin-bottom:16px;
+  box-shadow:0 10px 28px rgba(5,15,24,.17);
+ }
+ nav button{
+  padding:10px 13px;
+ }
+ .login{
+  width:calc(100% - 20px);
+  margin:20px auto;
+  padding:22px;
+ }
+ .card{
+  border-radius:17px;
+  padding:16px;
+ }
+ .stat{font-size:34px}
+ input,select,textarea{
+  min-height:46px;
+ }
+}
+
 </style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script></body></html>`);
  w.document.close();
 }
