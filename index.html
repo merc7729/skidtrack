@@ -192,6 +192,23 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
  <div class="grid"><div class="card"><h3>Filtered Hours</h3><div id="reportHours" class="stat">0.00</div></div><div class="card"><h3>Filtered Records</h3><div id="reportCount" class="stat">0</div></div></div><br>
  <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th></tr></thead><tbody id="reportTable"></tbody></table></div>
  </div>
+
+ <div class="card" style="margin-top:18px">
+  <div class="top">
+   <div>
+    <h3>Saved Weekly Reports</h3>
+    <span class="muted">Completed Monday-Friday weeks are archived automatically.</span>
+   </div>
+   <button type="button" class="secondary" onclick="refreshSavedWeeklyReports()">Refresh Saved</button>
+  </div>
+  <br>
+  <div class="table-wrap">
+   <table>
+    <thead><tr><th>Week Of</th><th>Saved</th><th>Actions</th></tr></thead>
+    <tbody id="savedWeeklyReportsTable"><tr><td colspan="3" class="empty">No saved weekly reports.</td></tr></tbody>
+   </table>
+  </div>
+ </div>
 </section>
 </div>
 </div>
@@ -210,6 +227,7 @@ let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null
 const $=x=>document.getElementById(x);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
+let savedWeeklyReports=[];
 function addSkidPrefix(value){
  return String(value||"").trim();
 }
@@ -518,7 +536,12 @@ async function loadProfile(){
 
 async function openApplication(){
  await loadProfile();$("loginScreen").classList.add("hidden");$("resetScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");
- await refreshAllData();openSkidFromUrl();
+ await refreshAllData();
+ if(admin()){
+  await archiveCompletedWeeklyReports();
+  await loadSavedWeeklyReports();
+ }
+ openSkidFromUrl();
 }
 
 async function refreshAllData(){
@@ -1844,6 +1867,8 @@ async function refreshReports(){
 
   populateFilters();
   renderReports();
+  await archiveCompletedWeeklyReports();
+  await loadSavedWeeklyReports();
 
  }catch(err){
   console.error("Report refresh failed:",err);
@@ -1887,9 +1912,8 @@ function mondayStart(date){
  return d;
 }
 
-function monSatRows(){
- const now=new Date();
- const monday=mondayStart(now);
+function weeklyRowsForMonday(mondayInput){
+ const monday=mondayStart(new Date(mondayInput));
  const saturday=new Date(monday);
  saturday.setDate(monday.getDate()+5);
 
@@ -1900,12 +1924,9 @@ function monSatRows(){
   if(isNaN(when) || when < monday || when >= saturday)return;
 
   const employee=r.profiles?.full_name||r.technician_name||"Former Employee";
-
-  // Preserve the original stored WT value so CSV can export the WT code.
   const rawWt=String(r.wt_number||r.wt_description||r.wt||r.work_performed||"").trim();
   const wtCode=wtNumberOnly(rawWt);
   const wtDescription=wtDescriptionOnly(rawWt);
-
   const key=employee+"||"+wtCode+"||"+wtDescription;
 
   if(!groups.has(key)){
@@ -1928,6 +1949,243 @@ function monSatRows(){
   a.employee.localeCompare(b.employee) ||
   a.wtCode.localeCompare(b.wtCode)
  );
+}
+
+function monSatRows(){
+ return weeklyRowsForMonday(mondayStart(new Date()));
+}
+
+
+function localDateKey(date){
+ const d=new Date(date);
+ const y=d.getFullYear();
+ const m=String(d.getMonth()+1).padStart(2,"0");
+ const day=String(d.getDate()).padStart(2,"0");
+ return `${y}-${m}-${day}`;
+}
+
+function formatWeekOf(weekStart,weekEnd){
+ const start=new Date(String(weekStart)+"T00:00:00");
+ const end=new Date(String(weekEnd)+"T00:00:00");
+ return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+}
+
+async function archiveCompletedWeeklyReports(){
+ if(!admin())return;
+
+ const currentMonday=mondayStart(new Date());
+ const completedWeekStarts=new Set();
+
+ allWorkRecords.forEach(r=>{
+  const when=new Date(r.performed_at||r.start_time||r.stop_time||0);
+  if(isNaN(when) || when>=currentMonday)return;
+
+  const weekMonday=mondayStart(when);
+  if(weekMonday<currentMonday){
+   completedWeekStarts.add(localDateKey(weekMonday));
+  }
+ });
+
+ if(!completedWeekStarts.size)return;
+
+ const {data:existing,error:readError}=await sb
+  .from("weekly_reports")
+  .select("week_start,is_removed");
+
+ if(readError){
+  console.warn("Weekly report archive is not available yet:",readError.message);
+  return;
+ }
+
+ const existingMap=new Map((existing||[]).map(r=>[String(r.week_start),r]));
+
+ for(const weekStart of [...completedWeekStarts].sort()){
+  if(existingMap.has(weekStart))continue;
+
+  const monday=new Date(weekStart+"T00:00:00");
+  const friday=new Date(monday);
+  friday.setDate(monday.getDate()+4);
+
+  const rows=weeklyRowsForMonday(monday);
+  if(!rows.length)continue;
+
+  const snapshot={
+   version:1,
+   rows,
+   generated_at:new Date().toISOString()
+  };
+
+  const {error}=await sb.from("weekly_reports").insert({
+   week_start:weekStart,
+   week_end:localDateKey(friday),
+   report_data:snapshot
+  });
+
+  if(error){
+   console.error("Could not archive week "+weekStart,error);
+  }
+ }
+}
+
+async function loadSavedWeeklyReports(){
+ if(!admin())return;
+
+ const {data,error}=await sb
+  .from("weekly_reports")
+  .select("id,week_start,week_end,report_data,created_at,is_removed")
+  .eq("is_removed",false)
+  .order("week_start",{ascending:false});
+
+ if(error){
+  console.warn("Could not load saved weekly reports:",error.message);
+  savedWeeklyReports=[];
+  renderSavedWeeklyReports("Run the weekly_reports SQL setup to enable saved reports.");
+  return;
+ }
+
+ savedWeeklyReports=data||[];
+ renderSavedWeeklyReports();
+}
+
+function renderSavedWeeklyReports(message){
+ const body=$("savedWeeklyReportsTable");
+ if(!body)return;
+
+ if(message){
+  body.innerHTML=`<tr><td colspan="3" class="empty">${esc(message)}</td></tr>`;
+  return;
+ }
+
+ body.innerHTML=savedWeeklyReports.map(r=>`<tr>
+  <td>${esc(formatWeekOf(r.week_start,r.week_end))}</td>
+  <td>${fmt(r.created_at)}</td>
+  <td>
+   <button type="button" class="small" onclick="viewSavedWeeklyReport('${r.id}')">View</button>
+   <button type="button" class="small danger" onclick="removeSavedWeeklyReport('${r.id}')">Remove</button>
+  </td>
+ </tr>`).join("")||'<tr><td colspan="3" class="empty">No completed weekly reports saved yet.</td></tr>';
+}
+
+async function refreshSavedWeeklyReports(){
+ await archiveCompletedWeeklyReports();
+ await loadSavedWeeklyReports();
+}
+
+function savedReportRows(report){
+ const payload=report?.report_data;
+ if(Array.isArray(payload))return payload;
+ if(payload && Array.isArray(payload.rows))return payload.rows;
+ if(typeof payload==="string"){
+  try{
+   const parsed=JSON.parse(payload);
+   if(Array.isArray(parsed))return parsed;
+   if(parsed && Array.isArray(parsed.rows))return parsed.rows;
+  }catch(e){}
+ }
+ return [];
+}
+
+function viewSavedWeeklyReport(id){
+ const report=savedWeeklyReports.find(r=>String(r.id)===String(id));
+ if(!report)return alert("Saved weekly report not found.");
+
+ const rows=savedReportRows(report);
+ const byEmployee=new Map();
+
+ rows.forEach(r=>{
+  if(!byEmployee.has(r.employee))byEmployee.set(r.employee,[]);
+  byEmployee.get(r.employee).push(r);
+ });
+
+ const weekOf=formatWeekOf(report.week_start,report.week_end);
+
+ const sections=[...byEmployee.entries()].map(([employee,items])=>{
+  const body=items.map(r=>`<tr>
+   <td>${esc(r.wtDescription||"")}</td>
+   ${(r.days||[0,0,0,0,0]).map(h=>`<td>${Number(h||0).toFixed(2)}</td>`).join("")}
+  </tr>`).join("");
+
+  return `<h3 style="margin-top:22px">Employee: ${esc(employee)} &nbsp; | &nbsp; Week Of: ${esc(weekOf)}</h3>
+   <div class="table-wrap">
+    <table>
+     <thead><tr>
+      <th>WT/Description</th>
+      <th>Monday</th>
+      <th>Tuesday</th>
+      <th>Wednesday</th>
+      <th>Thursday</th>
+      <th>Friday</th>
+     </tr></thead>
+     <tbody>${body}</tbody>
+    </table>
+   </div>`;
+ }).join("")||'<p class="empty">This saved report has no rows.</p>';
+
+ openModal(`<h2>Saved Weekly Report</h2>
+  <p class="muted">Week Of: ${esc(weekOf)}</p>
+  ${sections}
+  <br>
+  <button type="button" class="success" onclick="exportSavedWeeklyReportCSV('${report.id}')">Export CSV</button>
+  <button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
+function exportSavedWeeklyReportCSV(id){
+ const report=savedWeeklyReports.find(r=>String(r.id)===String(id));
+ if(!report)return alert("Saved weekly report not found.");
+
+ const rows=savedReportRows(report);
+ const byEmployee=new Map();
+ rows.forEach(r=>{
+  if(!byEmployee.has(r.employee))byEmployee.set(r.employee,[]);
+  byEmployee.get(r.employee).push(r);
+ });
+
+ const weekOf=formatWeekOf(report.week_start,report.week_end);
+ const csvRows=[];
+
+ [...byEmployee.entries()].forEach(([employee,items],index)=>{
+  if(index>0)csvRows.push([]);
+  csvRows.push(["Employee",employee,"Week Of",weekOf]);
+  csvRows.push(["WT","Monday","Tuesday","Wednesday","Thursday","Friday"]);
+
+  items.forEach(r=>{
+   csvRows.push([
+    r.wtCode||"",
+    ...(r.days||[0,0,0,0,0]).map(h=>Number(h||0).toFixed(2))
+   ]);
+  });
+ });
+
+ const csv=csvRows
+  .map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(","))
+  .join("\n");
+
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download=`SkidTrack_Weekly_${report.week_start}.csv`;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ URL.revokeObjectURL(url);
+}
+
+async function removeSavedWeeklyReport(id){
+ if(!admin())return alert("Admin access required.");
+ const report=savedWeeklyReports.find(r=>String(r.id)===String(id));
+ if(!report)return;
+
+ if(!confirm(`Remove saved weekly report for ${formatWeekOf(report.week_start,report.week_end)}?`))return;
+
+ const {error}=await sb
+  .from("weekly_reports")
+  .update({is_removed:true})
+  .eq("id",id);
+
+ if(error)return alert("Could not remove saved weekly report: "+error.message);
+
+ await loadSavedWeeklyReports();
 }
 
 function showMonSatReport(){
@@ -1966,7 +2224,7 @@ function showMonSatReport(){
    </div>`;
  }).join("") || '<p class="empty">No Monday-Friday work records found for this week.</p>';
 
- openModal(`<h2>Monday-Friday Report by Employee</h2>
+ openModal(`<h2>Current Week Report</h2>
   <p class="muted">${monday.toLocaleDateString()} through ${friday.toLocaleDateString()}</p>
   ${sections}
   <br>
