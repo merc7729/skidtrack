@@ -653,6 +653,96 @@ async function deleteSkid(id){
  await refreshAllData();
 }
 
+
+function assignedWtCodesForSkid(skid){
+ if(!skid)return [];
+ const raw=skid.wt_assignments;
+ if(Array.isArray(raw))return raw.map(String);
+ if(typeof raw==="string"){
+  try{
+   const parsed=JSON.parse(raw);
+   if(Array.isArray(parsed))return parsed.map(String);
+  }catch(e){}
+ }
+ return [];
+}
+
+function assignWtToSkid(id){
+ const skid=allSkids.find(s=>String(s.id)===String(id));
+ if(!skid)return alert("Skid not found.");
+
+ const assigned=new Set(assignedWtCodesForSkid(skid));
+
+ const options=wtNumbers.map(v=>{
+  const value=String(v.code||"")+" | "+String(v.description||"");
+  const checked=assigned.has(String(v.code||"")) ? "checked" : "";
+  return `<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin:7px 0">
+   <input type="checkbox" class="wtAssignCheck" value="${esc(v.code)}" ${checked} style="width:auto;margin-top:3px">
+   <span><b>${esc(v.code)}</b> — ${esc(v.description||"")}</span>
+  </label>`;
+ }).join("");
+
+ openModal(`<h2>Assign WT/Description</h2>
+  <p><b>Skid:</b> ${esc(skid.skid_number||"")}</p>
+  <p class="muted">Select every WT/Description that should be available for this skid in Log Work.</p>
+  <div style="max-height:420px;overflow:auto;border:1px solid #dbe3ea;border-radius:8px;padding:12px">${options}</div>
+  <br>
+  <button type="button" class="success" onclick="saveWtAssignments('${id}')">Save Assignments</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+}
+
+async function saveWtAssignments(id){
+ if(!admin())return alert("Admin access required.");
+
+ const codes=[...document.querySelectorAll(".wtAssignCheck:checked")]
+  .map(x=>x.value)
+  .filter(Boolean);
+
+ const {error}=await sb
+  .from("skids")
+  .update({wt_assignments:codes})
+  .eq("id",id);
+
+ if(error){
+  console.error(error);
+  return alert("Could not save WT assignments: "+error.message);
+ }
+
+ closeModal();
+ await refreshAllData();
+ alert("WT/Description assignments saved.");
+}
+
+function populateWtForAssignedSkid(skid){
+ const wt=$("workWT");
+ const soSelect=$("workSO");
+ if(!wt || !skid)return false;
+
+ const codes=assignedWtCodesForSkid(skid);
+ if(!codes.length)return false;
+
+ const assignedSet=new Set(codes);
+ const matching=wtNumbers.filter(v=>assignedSet.has(String(v.code||"")));
+
+ if(soSelect){
+  const uniqueSOs=[...new Set(matching.map(v=>String(v.so||"")).filter(Boolean))];
+  soSelect.innerHTML=uniqueSOs.length
+   ? uniqueSOs.map(so=>`<option value="${esc(so)}">${esc(so)}</option>`).join("")
+   : '<option value="">Assigned WT</option>';
+  soSelect.value=uniqueSOs[0]||"";
+  soSelect.disabled=true;
+ }
+
+ wt.innerHTML='<option value="">Select WT/Description</option>'+
+  matching.map(v=>{
+   const value=String(v.code||"")+" | "+String(v.description||"");
+   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+  }).join("");
+
+ wt.disabled=matching.length===0;
+ return true;
+}
+
 function editSkid(id){
  const s=allSkids.find(x=>x.id===id);
  if(!s)return alert("Skid not found.");
@@ -1975,7 +2065,9 @@ function manualSkidSelected(){
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=skid.skid_number||"";
  if($("selectedSkidId"))$("selectedSkidId").value=skid.id||"";
 
- matchSoAndWtToSkidNumber(skid.skid_number||"");
+ if(!populateWtForAssignedSkid(skid)){
+  matchSoAndWtToSkidNumber(skid.skid_number||"");
+ }
 }
 
 function handleQr(text){
@@ -2007,7 +2099,11 @@ function handleQr(text){
  if(idField)idField.value=skid ? String(skid.id||"") : "";
 
  // Match SO# and WT/Description using the last 4 digits.
- matchSoAndWtToSkidNumber(qrSkidNumber);
+ if(skid && populateWtForAssignedSkid(skid)){
+  setStatus("workMessage","✓ QR skid selected. Assigned WT/Descriptions loaded.","success");
+ }else{
+  matchSoAndWtToSkidNumber(qrSkidNumber);
+ }
 
  // Keep the scanned number visible after matching.
  if(display)display.value=qrSkidNumber;
