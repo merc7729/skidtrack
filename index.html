@@ -168,7 +168,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 <section id="history" class="page">
  <div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div>
  <div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br>
- <div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th><th>Start</th><th>Stop</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
+ <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Start</th><th>Stop</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
 
 <section id="employees" class="page">
@@ -1352,8 +1352,31 @@ async function saveWork(e){
 
 function renderHistory(){
  const q=$("historySearch").value.toLowerCase();
- const rows=allWorkRecords.filter(r=>[r.skids?.skid_number,r.work_performed,r.notes,r.profiles?.full_name].join(" ").toLowerCase().includes(q));
- $("historyTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${Number(r.time_spent||0).toFixed(2)}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td><td>${fmt(r.start_time)}</td><td>${fmt(r.stop_time)}</td><td>${esc(r.notes)}</td><td>${(admin()||r.technician_id===currentUser.id)?`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
+ const rows=allWorkRecords.filter(r=>[
+  r.profiles?.full_name,
+  r.technician_name,
+  r.skids?.skid_number,
+  r.wt_description,
+  r.wt,
+  r.work_performed,
+  r.notes
+ ].join(" ").toLowerCase().includes(q));
+
+ $("historyTable").innerHTML=rows.map(r=>{
+  const employee=esc(r.profiles?.full_name||r.technician_name||"Former Employee");
+  const wtDesc=esc(wtDescriptionOnly(r.wt_description||r.wt||r.work_performed||""));
+  return `<tr>
+   <td>${employee}</td>
+   <td>${fmt(r.performed_at)}</td>
+   <td>${esc(r.skids?.skid_number)}</td>
+   <td>${wtDesc}</td>
+   <td>${Number(r.time_spent||0).toFixed(2)}</td>
+   <td>${fmt(r.start_time)}</td>
+   <td>${fmt(r.stop_time)}</td>
+   <td>${esc(r.notes)}</td>
+   <td>${(admin()||r.technician_id===currentUser.id)?`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`:""}</td>
+  </tr>`;
+ }).join("")||'<tr><td colspan="9" class="empty">No records found.</td></tr>';
 }
 
 function editWork(id){
