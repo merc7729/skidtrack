@@ -150,7 +150,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <form id="skidForm">
    <div class="grid">
     <div><label>Single Skid Number</label><input id="skidNumber" placeholder="Enter one skid number"></div>
-    <div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div>
+    <div><label>Status</label><select id="skidStatus"><option value="active">Active</option><option value="complete">Complete</option></select></div>
    </div>
    <label>Multiple Skid Numbers</label>
    <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line"></textarea>
@@ -160,7 +160,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <div id="skidMessage" class="status"></div>
  </div><br>
  <div class="card">
-  <div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="out_of_service">Out of Service</option></select></div><br>
+  <div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="complete">Complete</option></select></div><br>
   <div class="table-wrap"><table><thead><tr><th>Skid</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div>
  </div>
 </section>
