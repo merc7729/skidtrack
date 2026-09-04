@@ -535,7 +535,11 @@ async function loadProfile(){
 }
 
 async function openApplication(){
- await loadProfile();$("loginScreen").classList.add("hidden");$("resetScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");
+ await loadProfile();
+ $("loginScreen").classList.add("hidden");
+ $("resetScreen").classList.add("hidden");
+ $("appScreen").classList.remove("hidden");
+ applyRoleVisibility();
  await refreshAllData();
  if(admin()){
   await archiveCompletedWeeklyReports();
@@ -545,14 +549,55 @@ async function openApplication(){
 }
 
 async function refreshAllData(){
- await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles()]);
+ if(admin()){
+  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles()]);
+ }else{
+  await Promise.all([loadSkids(),loadWorkRecords()]);
+ }
  renderDashboard();populateFilters();renderSkids();renderHistory();renderEmployees();renderReports();
 }
 
+
+function applyRoleVisibility(){
+ const isAdmin=admin();
+
+ // Admin sees the full app.
+ const adminNavIds=["dashboard","skids","employees","reports"];
+ adminNavIds.forEach(id=>{
+  const nav=$("nav-"+id);
+  const page=$(id);
+  if(nav)nav.classList.toggle("hidden",!isAdmin);
+  if(page)page.classList.toggle("hidden",!isAdmin);
+ });
+
+ // Everyone can use Log Work and Work History.
+ const workNav=$("nav-work");
+ const historyNav=$("nav-history");
+ if(workNav)workNav.classList.remove("hidden");
+ if(historyNav)historyNav.classList.remove("hidden");
+
+ // Non-admin employees land directly on Log Work.
+ if(!isAdmin){
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  if($("work"))$("work").classList.add("active");
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+  if(workNav)workNav.classList.add("active");
+ }
+}
+
 function showPage(id){
- document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(id).classList.add("active");
+ if(!admin() && !["work","history"].includes(id)){
+  id="work";
+ }
+
+ document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+ if($(id))$(id).classList.add("active");
+
  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
- const b=$("nav-"+id);if(b)b.classList.add("active");if(id!=="work")stopScanner();
+ const b=$("nav-"+id);
+ if(b)b.classList.add("active");
+
+ if(id!=="work")stopScanner();
 }
 
 async function loadSkids(){
@@ -575,9 +620,13 @@ async function loadSkids(){
 }
 
 async function loadWorkRecords(){
- const {data,error}=await sb.from("work_records")
+ let query=sb.from("work_records")
  .select("id,technician_id,technician_name,work_performed,time_spent,notes,performed_at,start_time,stop_time,skid_id,skids(id,skid_number),profiles(full_name)")
  .order("performed_at",{ascending:false});
+ if(!admin() && currentUser?.id){
+  query=query.eq("technician_id",currentUser.id);
+ }
+ const {data,error}=await query;
  if(error)console.error(error);allWorkRecords=data||[];
 }
 
@@ -1375,7 +1424,17 @@ async function saveWork(e){
 
 function renderHistory(){
  const q=$("historySearch").value.toLowerCase();
- const rows=allWorkRecords.filter(r=>[
+
+ let sourceRows=allWorkRecords;
+
+ // Non-admin employees only see their own work history.
+ if(!admin()){
+  sourceRows=sourceRows.filter(r=>
+   String(r.technician_id||"")===String(currentUser?.id||"")
+  );
+ }
+
+ const rows=sourceRows.filter(r=>[
   r.profiles?.full_name,
   r.technician_name,
   r.skids?.skid_number,
