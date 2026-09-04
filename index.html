@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SkidTrack</title>
+<title>SkidTracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -19,7 +19,12 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .secondary{background:#64748b}.success{background:var(--g)}.warning{background:var(--o)}.danger{background:var(--r)}
 .small{padding:6px 9px;font-size:12px}.hidden{display:none!important}
 header{background:var(--n);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
-header h1{margin:0;font-size:22px}.role{background:#dbeafe;color:#1e3a8a;padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}
+header h1{margin:0;font-size:22px}
+.brand-wrap{display:flex;align-items:center;gap:12px}
+.samco-logo{display:block;object-fit:contain;background:#fff;border-radius:8px;padding:5px}
+header .samco-logo{width:150px;height:58px}
+.login .samco-logo{width:230px;height:auto;max-height:100px;margin:0 auto 14px}
+@media(max-width:700px){header .samco-logo{width:120px;height:48px}.brand-wrap{gap:8px}}.role{background:#dbeafe;color:#1e3a8a;padding:5px 9px;border-radius:99px;font-size:12px;font-weight:bold}
 .container{max-width:1450px;margin:auto;padding:20px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}nav button.active{background:var(--n)}
 .page{display:none}.page.active{display:block}
@@ -48,7 +53,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 
 <div id="loginScreen">
  <div class="login">
-  <div class="logo">💧</div><h1>SkidTrack</h1>
+  <img class="samco-logo" src="https://images.squarespace-cdn.com/content/v1/69a5dbb461e77846484c5d16/1f70cf31-6c00-4f1f-8aa8-aab504b04ed3/samco%2Blogo_registered%2B%281%29.png" alt="SAMCO Technologies logo"><h1>SkidTracker</h1>
   <p class="muted" style="text-align:center">Water Filtration Service Management</p>
   <form id="loginForm">
    <label>Username</label><input id="loginUsername" type="text" autocomplete="username" required>
@@ -73,7 +78,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
 </form><div id="resetMessage" class="status"></div></div></div>
 <div id="appScreen" class="hidden">
 <header>
- <h1>💧 SkidTrack</h1>
+ <div class="brand-wrap"><img class="samco-logo" src="https://images.squarespace-cdn.com/content/v1/69a5dbb461e77846484c5d16/1f70cf31-6c00-4f1f-8aa8-aab504b04ed3/samco%2Blogo_registered%2B%281%29.png" alt="SAMCO Technologies logo"><h1>SkidTracker</h1></div>
  <div><span id="employeeName"></span> <span id="employeeRole" class="role"></span>
  <button class="secondary" onclick="logout()">Logout</button></div>
 </header>
@@ -1336,7 +1341,7 @@ function syncSoWtToSelectedSkid(){
  const skidNumber=selectedSkid?.skid_number||"";
  const so=getSoFromSkidNumber(skidNumber);
 
- console.log("SkidTrack SO match:",{
+ console.log("SkidTracker SO match:",{
   skidNumber,
   matchedSO:so
  });
@@ -1661,7 +1666,7 @@ async function addEmployee(){
    if(data?.message && !data?.success){
     return setStatus(
      "addEmployeeMessage",
-     "The deployed Edge Function is not the SkidTrack employee-creation function. "+
+     "The deployed Edge Function is not the SkidTracker employee-creation function. "+
      "Redeploy admin-create-employee with the correct code.",
      "error"
     );
@@ -2234,7 +2239,7 @@ function exportSavedWeeklyReportCSV(id){
  const url=URL.createObjectURL(blob);
  const a=document.createElement("a");
  a.href=url;
- a.download=`SkidTrack_Weekly_${report.week_start}.csv`;
+ a.download=`SkidTracker_Weekly_${report.week_start}.csv`;
  document.body.appendChild(a);
  a.click();
  a.remove();
@@ -2346,7 +2351,7 @@ function exportMonSatReportCSV(){
  const url=URL.createObjectURL(blob);
  const a=document.createElement("a");
  a.href=url;
- a.download=`SkidTrack_Mon-Fri_By_Employee_${monday.toISOString().slice(0,10)}.csv`;
+ a.download=`SkidTracker_Mon-Fri_By_Employee_${monday.toISOString().slice(0,10)}.csv`;
  document.body.appendChild(a);
  a.click();
  a.remove();
@@ -2425,7 +2430,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTrack</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script></body></html>`);
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script></body></html>`);
  w.document.close();
 }
 
