@@ -169,7 +169,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
  <div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div>
  <div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br>
  <div class="table-wrap"><table><thead><tr>
-<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Start</th><th>Stop</th>
+<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
 <th class="history-admin-col">Notes</th><th class="history-admin-col">Actions</th>
 </tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
@@ -1457,19 +1457,19 @@ function renderHistory(){
    <td>${fmt(r.performed_at)}</td>
    <td>${esc(r.skids?.skid_number)}</td>
    <td>${wtDesc}</td>
-   <td>${Number(r.time_spent||0).toFixed(2)}</td>
-   <td>${fmt(r.start_time)}</td>
-   <td>${fmt(r.stop_time)}</td>`;
+   <td>${Number(r.time_spent||0).toFixed(2)}</td>`;
 
   if(admin()){
    return `<tr>${baseCells}
+    <td>${fmt(r.start_time)}</td>
+    <td>${fmt(r.stop_time)}</td>
     <td>${esc(r.notes)}</td>
-    <td>${`<button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button>`}</td>
+    <td><button type="button" class="small warning" onclick="editWork('${r.id}')">Edit</button> <button type="button" class="small danger" onclick="deleteWork('${r.id}')">Delete</button></td>
    </tr>`;
   }
 
   return `<tr>${baseCells}</tr>`;
- }).join("") || `<tr><td colspan="${admin()?9:7}" class="empty">No records found.</td></tr>`;
+ }).join("") || `<tr><td colspan="${admin()?9:5}" class="empty">No records found.</td></tr>`;
 }
 
 function editWork(id){
