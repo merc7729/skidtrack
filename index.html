@@ -1185,7 +1185,11 @@ async function saveWork(e){
  $("timeSpent").value="0.00";
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
  if($("selectedSkidId"))$("selectedSkidId").value="";
- if($("workSO"))$("workSO").value="";
+ if($("workSO")){
+  $("workSO").innerHTML='<option value="">Select SO#</option>';
+  $("workSO").value="";
+  $("workSO").disabled=true;
+ }
  if($("workWT")){
   $("workWT").innerHTML='<option value="">Select WT/Description</option>';
   $("workWT").disabled=true;
@@ -1781,16 +1785,76 @@ async function stopScanner(){
  html5QrCode=null;$("reader").innerHTML="";
 }
 
+
+function getSpecialWtCodesForSelectedSkid(skidNumber){
+ const n=String(skidNumber||"").trim().toUpperCase();
+
+ const specialMap={
+  "0Z-DWT-SKD-01-A15":{
+   so:"0007303",
+   codes:[
+    "0007303-003-100",
+    "0007303-003-105",
+    "0007303-003-110",
+    "0007303-003-115",
+    "0007303-003-120",
+    "0007303-003-125",
+    "0007303-003-130"
+   ]
+  }
+ };
+
+ return specialMap[n]||null;
+}
+
 function matchSoAndWtToSkidNumber(skidNumber){
  const number=String(skidNumber||"").trim();
- const skidDigits=number.replace(/\D/g,"");
- const skidFirst4=skidDigits.slice(0,4);
-
  const soSelect=$("workSO");
  const wt=$("workWT");
 
+ const special=getSpecialWtCodesForSelectedSkid(number);
+
+ if(special){
+  if(soSelect){
+   soSelect.innerHTML=
+    `<option value="${esc(special.so)}">${esc(special.so)}</option>`;
+   soSelect.value=special.so;
+   soSelect.disabled=true;
+  }
+
+  const allowed=new Set(special.codes);
+
+  const matchingWT=wtNumbers.filter(v=>
+   String(v.so||"").trim()===special.so &&
+   allowed.has(String(v.code||"").trim())
+  );
+
+  if(wt){
+   wt.innerHTML='<option value="">Select WT/Description</option>'+
+    matchingWT.map(v=>{
+     const value=String(v.code||"")+" | "+String(v.description||"");
+     return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+    }).join("");
+
+   wt.disabled=matchingWT.length===0;
+  }
+
+  setStatus(
+   "workMessage",
+   "✓ Bag Filter Skid matched SO# 0007303. Only Bag Filter WT/Descriptions are shown.",
+   "success"
+  );
+  return;
+ }
+
+ const skidDigits=number.replace(/\D/g,"");
+ const skidFirst4=skidDigits.slice(0,4);
+
  if(!skidFirst4){
-  if(soSelect)soSelect.value="";
+  if(soSelect){
+   soSelect.innerHTML='<option value="">No matching SO#</option>';
+   soSelect.value="";
+  }
   if(wt){
    wt.innerHTML='<option value="">Select WT/Description</option>';
    wt.disabled=true;
@@ -1798,15 +1862,20 @@ function matchSoAndWtToSkidNumber(skidNumber){
   return;
  }
 
- // Find the SO# whose LAST 4 digits equal the skid's FIRST 4 digits.
- const matchedSO=[...new Set(wtNumbers.map(v=>String(v.so||"").trim()))]
-  .find(so=>{
-   const soDigits=so.replace(/\D/g,"");
-   return soDigits.slice(-4)===skidFirst4;
-  });
+ const allSOs=[...new Set(
+  wtNumbers.map(v=>String(v.so||"").trim()).filter(Boolean)
+ )];
+
+ const matchedSO=allSOs.find(so=>{
+  const soDigits=so.replace(/\D/g,"");
+  return soDigits.slice(-4)===skidFirst4;
+ });
 
  if(!matchedSO){
-  if(soSelect)soSelect.value="";
+  if(soSelect){
+   soSelect.innerHTML='<option value="">No matching SO#</option>';
+   soSelect.value="";
+  }
   if(wt){
    wt.innerHTML='<option value="">No matching WT/Description</option>';
    wt.disabled=true;
@@ -1820,12 +1889,13 @@ function matchSoAndWtToSkidNumber(skidNumber){
   return;
  }
 
- // Set the matched SO#.
  if(soSelect){
+  soSelect.innerHTML=
+   `<option value="${esc(matchedSO)}">${esc(matchedSO)}</option>`;
   soSelect.value=matchedSO;
+  soSelect.disabled=true;
  }
 
- // WT/Description must belong to the SAME matched SO#.
  const matchingWT=wtNumbers.filter(v=>
   String(v.so||"").trim()===matchedSO
  );
@@ -1842,7 +1912,7 @@ function matchSoAndWtToSkidNumber(skidNumber){
 
  setStatus(
   "workMessage",
-  "✓ Skid "+number+" matched SO# "+matchedSO+" using "+skidFirst4+". Select the matching WT/Description.",
+  "✓ Skid "+number+" matched SO# "+matchedSO+". Select WT/Description.",
   "success"
  );
 }
