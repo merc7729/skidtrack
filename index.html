@@ -190,7 +190,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <div><label>Skid</label><select id="reportSkid" onchange="renderReports()"></select></div>
  </div><br>
  <div class="grid"><div class="card"><h3>Filtered Hours</h3><div id="reportHours" class="stat">0.00</div></div><div class="card"><h3>Filtered Records</h3><div id="reportCount" class="stat">0</div></div></div><br>
- <div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="reportTable"></tbody></table></div>
+ <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th></tr></thead><tbody id="reportTable"></tbody></table></div>
  </div>
 </section>
 </div>
@@ -1851,7 +1851,7 @@ function renderReports(){
  if(!admin())return;
  const rows=reportRows(),h=rows.reduce((a,r)=>a+Number(r.time_spent||0),0);
  $("reportHours").textContent=h.toFixed(2);$("reportCount").textContent=rows.length;
- $("reportTable").innerHTML=rows.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>';
+ $("reportTable").innerHTML=rows.map(r=>`<tr><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>';
 }
 
 function exportCSV(){
