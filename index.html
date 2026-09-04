@@ -131,7 +131,8 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
     <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
    </div>
    <div class="row">
-<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan skid QR code"><input id="selectedSkidId" type="hidden"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+<div><label>Select Skid</label><select id="workSkidSelect" onchange="manualSkidSelected()"><option value="">Select Skid</option></select></div>
+<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan QR or select skid"><input id="selectedSkidId" type="hidden"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
 <div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
@@ -534,6 +535,18 @@ function showPage(id){
 async function loadSkids(){
  const {data,error}=await sb.from("skids").select("*").order("skid_number");
  if(error)console.error(error);allSkids=data||[];
+ if($("workSkidSelect")){
+  const current=$("workSkidSelect").value;
+  $("workSkidSelect").innerHTML='<option value="">Select Skid</option>'+
+   allSkids
+    .slice()
+    .sort((a,b)=>String(a.skid_number||"").localeCompare(String(b.skid_number||"")))
+    .map(s=>`<option value="${esc(s.id)}">${esc(s.skid_number)}</option>`)
+    .join("");
+  if(current && allSkids.some(s=>String(s.id)===String(current))){
+   $("workSkidSelect").value=current;
+  }
+ }
  
 
 }
@@ -1185,6 +1198,7 @@ async function saveWork(e){
  $("timeSpent").value="0.00";
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
  if($("selectedSkidId"))$("selectedSkidId").value="";
+ if($("workSkidSelect"))$("workSkidSelect").value="";
  if($("workSO")){
   $("workSO").innerHTML='<option value="">Select SO#</option>';
   $("workSO").value="";
@@ -1915,6 +1929,31 @@ function matchSoAndWtToSkidNumber(skidNumber){
   "✓ Skid "+number+" matched SO# "+matchedSO+". Select WT/Description.",
   "success"
  );
+}
+
+function manualSkidSelected(){
+ const id=$("workSkidSelect")?.value||"";
+ const skid=allSkids.find(s=>String(s.id)===String(id));
+
+ if(!skid){
+  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value="";
+  if($("selectedSkidId"))$("selectedSkidId").value="";
+  if($("workSO")){
+   $("workSO").innerHTML='<option value="">Select SO#</option>';
+   $("workSO").value="";
+   $("workSO").disabled=true;
+  }
+  if($("workWT")){
+   $("workWT").innerHTML='<option value="">Select WT/Description</option>';
+   $("workWT").disabled=true;
+  }
+  return;
+ }
+
+ if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=skid.skid_number||"";
+ if($("selectedSkidId"))$("selectedSkidId").value=skid.id||"";
+
+ matchSoAndWtToSkidNumber(skid.skid_number||"");
 }
 
 function handleQr(text){
