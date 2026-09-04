@@ -1967,9 +1967,20 @@ function showMonSatReport(){
   <button type="button" class="secondary" onclick="closeModal()">Close</button>`);
 }
 
+
+function wtNumberOnly(value){
+ const text=String(value||"").trim();
+ if(!text)return "";
+ return text.split("|")[0].trim();
+}
+
 function exportMonSatReportCSV(){
  const rows=monSatRows();
  const monday=mondayStart(new Date());
+ const friday=new Date(monday);
+ friday.setDate(monday.getDate()+4);
+
+ const weekOf=`${monday.toLocaleDateString()} - ${friday.toLocaleDateString()}`;
 
  const byEmployee=new Map();
  rows.forEach(r=>{
@@ -1981,12 +1992,12 @@ function exportMonSatReportCSV(){
 
  [...byEmployee.entries()].forEach(([employee,items],index)=>{
   if(index>0)csvRows.push([]);
-  csvRows.push(["Employee",employee]);
-  csvRows.push(["WT/Description","Monday","Tuesday","Wednesday","Thursday","Friday"]);
+  csvRows.push(["Employee",employee,"Week Of",weekOf]);
+  csvRows.push(["WT","Monday","Tuesday","Wednesday","Thursday","Friday"]);
 
   items.forEach(r=>{
    csvRows.push([
-    r.wt,
+    wtNumberOnly(r.wt),
     ...r.days.map(h=>Number(h).toFixed(2))
    ]);
   });
