@@ -752,7 +752,7 @@ function populateWtForAssignedSkid(skid){
  wt.innerHTML='<option value="">Select WT/Description</option>'+
   matching.map(v=>{
    const value=String(v.code||"")+" | "+String(v.description||"");
-   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+   return `<option value="${esc(value)}">${esc(v.description||"")}</option>`;
   }).join("");
 
  wt.disabled=matching.length===0;
@@ -1234,7 +1234,7 @@ function populateWTForSelectedSO(){
   wt.innerHTML='<option value="">Select WT/Description</option>'+
    approved.map(v=>{
     const value=v.code+" | "+v.description;
-    return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description)}</option>`;
+    return `<option value="${esc(value)}">${esc(v.description||"")}</option>`;
    }).join("");
 
   wt.disabled=false;
@@ -1246,7 +1246,7 @@ function populateWTForSelectedSO(){
  wt.innerHTML='<option value="">Select WT/Description</option>'+
   matching.map(v=>{
    const value=String(v.code||"")+" | "+String(v.description||"");
-   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+   return `<option value="${esc(value)}">${esc(v.description||"")}</option>`;
   }).join("");
 
  wt.disabled=!so || matching.length===0;
@@ -1299,7 +1299,7 @@ function syncSoWtToSelectedSkid(){
  wtSelect.innerHTML=
   '<option value="">Select WT/Description</option>'+
   matching.map(v=>
-   `<option value="${esc(v.code+" | "+v.description)}">${esc(v.code)} | ${esc(v.description)}</option>`
+   `<option value="${esc(v.code+" | "+v.description)}">${esc(v.description||"")}</option>`
   ).join("");
 
  wtSelect.disabled=false;
@@ -2046,7 +2046,7 @@ function matchSoAndWtToSkidNumber(skidNumber){
   wt.innerHTML='<option value="">Select WT/Description</option>'+
    matchingWT.map(v=>{
     const value=String(v.code||"")+" | "+String(v.description||"");
-    return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+    return `<option value="${esc(value)}">${esc(v.description||"")}</option>`;
    }).join("");
 
   wt.disabled=matchingWT.length===0;
