@@ -1107,11 +1107,15 @@ function populateWTForSelectedSO(){
  const wt=$("workWT");
  if(!wt)return;
 
- const selectedSkid=String($("selectedSkidDisplay")?.value||"").trim().toUpperCase();
+ const selectedSkidText=String($("selectedSkidDisplay")?.value||"").trim();
+ const manualId=$("workSkidSelect")?.value||"";
+ const manualSkid=allSkids.find(s=>String(s.id)===String(manualId));
+ const skidIdentity=selectedSkidText || String(manualSkid?.skid_number||"");
 
- // Hard rule for Bag Filter Skid: only these 7 approved WT/Descriptions.
- if(selectedSkid==="0Z-DWT-SKD-01-A15"){
-  const bagFilterWT=[
+ const special=getSpecialWtCodesForSelectedSkid(skidIdentity);
+
+ if(special){
+  const approved=[
    {code:"0007303-003-100",description:"BF Skid-ST/Coat"},
    {code:"0007303-003-105",description:"BF Skid-EIVS"},
    {code:"0007303-003-110",description:"BF Skid- P/F-Labor"},
@@ -1122,7 +1126,7 @@ function populateWTForSelectedSO(){
   ];
 
   wt.innerHTML='<option value="">Select WT/Description</option>'+
-   bagFilterWT.map(v=>{
+   approved.map(v=>{
     const value=v.code+" | "+v.description;
     return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description)}</option>`;
    }).join("");
@@ -1131,11 +1135,13 @@ function populateWTForSelectedSO(){
   return;
  }
 
- // Default behavior for other skids.
- const matching=wtNumbers.filter(v=>v.so===so);
+ const matching=wtNumbers.filter(v=>String(v.so||"").trim()===String(so).trim());
 
  wt.innerHTML='<option value="">Select WT/Description</option>'+
-  matching.map(v=>`<option value="${esc(v.code+" | "+v.description)}">${esc(v.code)} | ${esc(v.description||"")}</option>`).join("");
+  matching.map(v=>{
+   const value=String(v.code||"")+" | "+String(v.description||"");
+   return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description||"")}</option>`;
+  }).join("");
 
  wt.disabled=!so || matching.length===0;
 }
@@ -1830,8 +1836,8 @@ async function stopScanner(){
 function getSpecialWtCodesForSelectedSkid(skidNumber){
  const n=String(skidNumber||"").trim().toUpperCase();
 
- const specialMap={
-  "0Z-DWT-SKD-01-A15":{
+ if(n.includes("0Z-DWT-SKD-01-A15")){
+  return {
    so:"0007303",
    codes:[
     "0007303-003-100",
@@ -1842,10 +1848,10 @@ function getSpecialWtCodesForSelectedSkid(skidNumber){
     "0007303-003-125",
     "0007303-003-130"
    ]
-  }
- };
+  };
+ }
 
- return specialMap[n]||null;
+ return null;
 }
 
 function matchSoAndWtToSkidNumber(skidNumber){
@@ -1863,28 +1869,15 @@ function matchSoAndWtToSkidNumber(skidNumber){
    soSelect.disabled=true;
   }
 
-  const bagFilterWT=[
-   {code:"0007303-003-100",description:"BF Skid-ST/Coat"},
-   {code:"0007303-003-105",description:"BF Skid-EIVS"},
-   {code:"0007303-003-110",description:"BF Skid- P/F-Labor"},
-   {code:"0007303-003-115",description:"BF Skid- Panel"},
-   {code:"0007303-003-120",description:"BF Skid- Skid Elec"},
-   {code:"0007303-003-125",description:"BF Skid-Process/Air Tube"},
-   {code:"0007303-003-130",description:"BF Skid-FAT"}
-  ];
-
-  if(wt){
-   wt.innerHTML='<option value="">Select WT/Description</option>'+
-    bagFilterWT.map(v=>{
-     const value=v.code+" | "+v.description;
-     return `<option value="${esc(value)}">${esc(v.code)} | ${esc(v.description)}</option>`;
-    }).join("");
-   wt.disabled=false;
+  if($("selectedSkidDisplay")){
+   $("selectedSkidDisplay").value=number;
   }
+
+  populateWTForSelectedSO();
 
   setStatus(
    "workMessage",
-   "✓ Bag Filter Skid matched SO# 0007303. Only the approved Bag Filter WT/Descriptions are shown.",
+   "✓ Bag Filter Skid matched SO# 0007303. Only 7 approved WT/Descriptions are available.",
    "success"
   );
   return;
