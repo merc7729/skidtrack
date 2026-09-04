@@ -180,6 +180,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <h2>Reports</h2>
   <div class="actions">
    <button type="button" class="secondary" onclick="refreshReports()">Refresh</button>
+   <button type="button" onclick="showMonSatReport()">Mon-Sat Report</button>
    <button type="button" class="success" onclick="exportCSV()">Export CSV</button>
   </div>
  </div>
@@ -1875,6 +1876,110 @@ function renderReports(){
  const rows=reportRows(),h=rows.reduce((a,r)=>a+Number(r.time_spent||0),0);
  $("reportHours").textContent=h.toFixed(2);$("reportCount").textContent=rows.length;
  $("reportTable").innerHTML=rows.map(r=>`<tr><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td><td>${fmt(r.performed_at)}</td><td>${esc(r.skids?.skid_number)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No records match the filters.</td></tr>';
+}
+
+
+function mondayStart(date){
+ const d=new Date(date);
+ d.setHours(0,0,0,0);
+ const day=d.getDay();
+ const diff=day===0 ? -6 : 1-day;
+ d.setDate(d.getDate()+diff);
+ return d;
+}
+
+function monSatRows(){
+ const now=new Date();
+ const monday=mondayStart(now);
+ const sunday=new Date(monday);
+ sunday.setDate(monday.getDate()+6);
+
+ const groups=new Map();
+
+ allWorkRecords.forEach(r=>{
+  const when=new Date(r.performed_at||r.start_time||r.stop_time||0);
+  if(isNaN(when) || when < monday || when >= sunday)return;
+
+  const employee=r.profiles?.full_name||r.technician_name||"Former Employee";
+  const wt=wtDescriptionOnly(r.wt_description||r.wt||r.work_performed||"");
+  const key=employee+"||"+wt;
+
+  if(!groups.has(key)){
+   groups.set(key,{
+    employee,
+    wt,
+    days:[0,0,0,0,0,0]
+   });
+  }
+
+  const row=groups.get(key);
+  const jsDay=when.getDay(); // Sun=0, Mon=1 ... Sat=6
+  if(jsDay>=1 && jsDay<=6){
+   row.days[jsDay-1]+=Number(r.time_spent||0);
+  }
+ });
+
+ return [...groups.values()].sort((a,b)=>
+  a.employee.localeCompare(b.employee) || a.wt.localeCompare(b.wt)
+ );
+}
+
+function showMonSatReport(){
+ const rows=monSatRows();
+ const monday=mondayStart(new Date());
+ const saturday=new Date(monday);
+ saturday.setDate(monday.getDate()+5);
+
+ const body=rows.map(r=>`<tr>
+  <td>${esc(r.employee)}</td>
+  <td>${esc(r.wt)}</td>
+  ${r.days.map(h=>`<td>${Number(h).toFixed(2)}</td>`).join("")}
+ </tr>`).join("") || '<tr><td colspan="8" class="empty">No Monday-Saturday work records found for this week.</td></tr>';
+
+ openModal(`<h2>Monday-Saturday Report</h2>
+  <p class="muted">${monday.toLocaleDateString()} through ${saturday.toLocaleDateString()}</p>
+  <div class="table-wrap">
+   <table>
+    <thead><tr>
+     <th>Employee</th>
+     <th>WT/Description</th>
+     <th>Monday</th>
+     <th>Tuesday</th>
+     <th>Wednesday</th>
+     <th>Thursday</th>
+     <th>Friday</th>
+     <th>Saturday</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+   </table>
+  </div>
+  <br>
+  <button type="button" class="success" onclick="exportMonSatReportCSV()">Export CSV</button>
+  <button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
+function exportMonSatReportCSV(){
+ const rows=monSatRows();
+ const monday=mondayStart(new Date());
+
+ const csv=[
+  ["Employee","WT/Description","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+  ...rows.map(r=>[
+   r.employee,
+   r.wt,
+   ...r.days.map(h=>Number(h).toFixed(2))
+  ])
+ ].map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download=`SkidTrack_Mon-Sat_${monday.toISOString().slice(0,10)}.csv`;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ URL.revokeObjectURL(url);
 }
 
 function exportCSV(){
