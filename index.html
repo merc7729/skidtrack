@@ -574,7 +574,7 @@ function renderDashboard(){
 function renderSkids(){
  const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
  const rows=allSkids.filter(s=>[s.skid_number].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
- $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small" onclick="assignWtToSkid('${s.id}')">Assign WT/Description</button><button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
 }
 
 async function addSkid(e){
