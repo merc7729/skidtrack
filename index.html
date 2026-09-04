@@ -96,7 +96,7 @@ textarea{min-height:90px}.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.row>
   <div class="card"><h3>Total Labor Hours</h3><div id="totalHours" class="stat">0.00</div></div>
   <div class="card"><h3>Employees</h3><div id="totalEmployees" class="stat">0</div></div>
  </div><br>
- <div class="card"><h3>Recent Service Activity</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>Work</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="recentActivity"></tbody></table></div></div>
+ <div class="card"><h3>Recent Service Activity</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Employee</th></tr></thead><tbody id="recentActivity"></tbody></table></div></div>
 </section>
 
 <section id="work" class="page">
@@ -1840,6 +1840,13 @@ function reportRows(){
  return allWorkRecords.filter(r=>{const d=(r.performed_at||"").slice(0,10);return(!f||d>=f)&&(!t||d<=t)&&(!e||r.technician_id===e)&&(!s||r.skids?.id===s)});
 }
 
+function wtDescriptionOnly(value){
+ const text=String(value||"").trim();
+ if(!text)return "";
+ const parts=text.split("|");
+ return parts.length>1 ? parts.slice(1).join("|").trim() : text;
+}
+
 function renderReports(){
  if(!admin())return;
  const rows=reportRows(),h=rows.reduce((a,r)=>a+Number(r.time_spent||0),0);
@@ -1849,7 +1856,7 @@ function renderReports(){
 
 function exportCSV(){
  const rows=reportRows();
- const txt=[["Date","Skid","Work","Hours","Employee","Start Time","Stop Time","Notes"],...rows.map(r=>[r.performed_at,r.skids?.skid_number,r.work_performed,r.time_spent,r.profiles?.full_name,r.start_time,r.stop_time,r.notes])].map(a=>a.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n");
+ const txt=[["Date","Skid","WT/Description","Hours","Employee","Start Time","Stop Time","Notes"],...rows.map(r=>[r.performed_at,r.skids?.skid_number,r.work_performed,r.time_spent,r.profiles?.full_name,r.start_time,r.stop_time,r.notes])].map(a=>a.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n");
  const u=URL.createObjectURL(new Blob([txt],{type:"text/csv"})),a=document.createElement("a");a.href=u;a.download="skidtrack-report.csv";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
 }
 
