@@ -517,6 +517,35 @@ header .skidtracker-brand-logo{
   text-align:center !important;
 }
 
+
+/* Fixed square QR used in both View and QR dialogs */
+#qrCanvas{
+  width:240px !important;
+  height:240px !important;
+  min-width:240px !important;
+  min-height:240px !important;
+  max-width:240px !important;
+  max-height:240px !important;
+  margin:18px auto !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  display:block !important;
+}
+#qrCanvas > img{
+  width:240px !important;
+  height:240px !important;
+  min-width:240px !important;
+  min-height:240px !important;
+  max-width:240px !important;
+  max-height:240px !important;
+  display:block !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  transform:none !important;
+  aspect-ratio:1 / 1 !important;
+}
+
 </style>
 </head>
 <body>
@@ -2881,45 +2910,70 @@ function drawQr(containerId,text,size){
  if(!c)return alert("QR container error.");
  if(typeof QRCode==="undefined")return alert("QR library failed to load. Refresh the page and try again.");
 
+ const px=Math.max(180,Math.min(Number(size)||240,280));
  c.innerHTML="";
- c.style.setProperty("width",size+"px","important");
- c.style.setProperty("max-width","100%","important");
- c.style.setProperty("height","auto","important");
- c.style.setProperty("margin-left","auto","important");
- c.style.setProperty("margin-right","auto","important");
- c.style.setProperty("display","block","important");
- c.style.setProperty("overflow","visible","important");
+ c.style.cssText=`width:${px}px;height:${px}px;margin:18px auto;display:block;overflow:hidden;`;
+
+ const temp=document.createElement("div");
+ temp.style.cssText=`position:fixed;left:-10000px;top:-10000px;width:${px}px;height:${px}px;overflow:hidden;`;
+ document.body.appendChild(temp);
 
  try{
-  new QRCode(c,{
+  new QRCode(temp,{
    text:text,
-   width:size,
-   height:size,
+   width:px,
+   height:px,
    colorDark:"#000000",
    colorLight:"#ffffff",
    correctLevel:QRCode.CorrectLevel.M
   });
 
-  const lockQrSquare=()=>{
-   c.querySelectorAll("canvas,img").forEach(el=>{
-    el.style.setProperty("display","block","important");
-    el.style.setProperty("width",size+"px","important");
-    el.style.setProperty("height",size+"px","important");
-    el.style.setProperty("min-width",size+"px","important");
-    el.style.setProperty("min-height",size+"px","important");
-    el.style.setProperty("max-width",size+"px","important");
-    el.style.setProperty("max-height",size+"px","important");
-    el.style.setProperty("object-fit","contain","important");
-    el.style.setProperty("margin","0 auto","important");
-    el.style.setProperty("transform","none","important");
-    el.style.setProperty("flex","none","important");
-   });
+  const finish=()=>{
+   let src="";
+   const canvas=temp.querySelector("canvas");
+   const generatedImg=temp.querySelector("img");
+
+   if(canvas){
+    canvas.width=px;
+    canvas.height=px;
+    try{src=canvas.toDataURL("image/png");}catch(e){}
+   }
+   if(!src && generatedImg)src=generatedImg.src;
+
+   if(!src){
+    setTimeout(finish,25);
+    return;
+   }
+
+   const img=document.createElement("img");
+   img.src=src;
+   img.alt="QR Code";
+   img.width=px;
+   img.height=px;
+   img.setAttribute("width",String(px));
+   img.setAttribute("height",String(px));
+   img.style.cssText=[
+    `width:${px}px !important`,
+    `height:${px}px !important`,
+    `min-width:${px}px !important`,
+    `min-height:${px}px !important`,
+    `max-width:${px}px !important`,
+    `max-height:${px}px !important`,
+    "display:block !important",
+    "margin:0 auto !important",
+    "object-fit:fill !important",
+    "aspect-ratio:1 / 1 !important",
+    "transform:none !important"
+   ].join(";");
+
+   c.innerHTML="";
+   c.appendChild(img);
+   temp.remove();
   };
 
-  lockQrSquare();
-  requestAnimationFrame(lockQrSquare);
-  setTimeout(lockQrSquare,50);
+  setTimeout(finish,30);
  }catch(e){
+  temp.remove();
   console.error("QR generation failed:",e);
   alert("QR generation failed: "+e.message);
  }
@@ -2928,14 +2982,14 @@ function drawQr(containerId,text,size){
 function showQr(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  openModal(`<div class="qrbox"><h2>${esc(s.skid_number)}</h2><div id="qrCanvas" class="qr-container"></div><button type="button" onclick="printQrLabel('${s.id}')">Print Label</button> <button type="button" class="secondary" onclick="closeModal()">Close</button></div>`);
- setTimeout(()=>drawQr("qrCanvas",skidUrl(s),280),50);
+ setTimeout(()=>drawQr("qrCanvas",skidUrl(s),240),50);
 }
 
 function viewSkid(id){
  const s=allSkids.find(x=>x.id===id);if(!s)return;
  const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
  openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
- setTimeout(()=>drawQr("qrCanvas",skidUrl(s),180),50);
+ setTimeout(()=>drawQr("qrCanvas",skidUrl(s),240),50);
 }
 
 function printQrLabel(id){
