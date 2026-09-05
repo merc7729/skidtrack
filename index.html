@@ -487,6 +487,50 @@ header .skidtracker-brand-logo{
   .login .skidtracker-brand-logo{width:280px}
 }
 
+
+/* Center View and QR controls in Skids */
+#skidsTable th:last-child,
+#skidsTable td:last-child,
+#skidsTableBody td:last-child {
+  text-align:center !important;
+}
+#skidsTable td:last-child .actions,
+#skidsTableBody td:last-child .actions {
+  justify-content:center !important;
+  align-items:center !important;
+}
+
+
+/* Center QR when opened */
+.qrbox,
+.qr-container,
+#qrCode,
+#qrcode,
+[id*="qrCode"],
+[id*="qrcode"] {
+  margin-left:auto !important;
+  margin-right:auto !important;
+  text-align:center !important;
+}
+.qrbox canvas,
+.qrbox img,
+.qr-container canvas,
+.qr-container img,
+#qrCode canvas,
+#qrCode img,
+#qrcode canvas,
+#qrcode img {
+  display:block !important;
+  margin:0 auto !important;
+}
+.modal .qrbox,
+.modal .qr-container {
+  display:flex !important;
+  flex-direction:column;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
 </style>
 </head>
 <body>
