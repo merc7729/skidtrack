@@ -967,7 +967,7 @@ async function forgotPassword(){
  setStatus("loginMessage","Sending password reset email...");
 
  // Return the recovery link to the same deployed SkidTracker site.
- const redirectTo=location.origin + location.pathname;
+ const redirectTo="https://skidtrack.vercel.app/";
 
  const {error}=await sb.auth.resetPasswordForEmail(cleanEmail,{
   redirectTo
