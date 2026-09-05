@@ -381,6 +381,61 @@ tbody tr:hover{background:#f9fbfc}
   .login{padding:20px}
 }
 
+
+/* ===== Button colors ===== */
+/* Default: every button is blue */
+button,
+button.secondary,
+button.small,
+nav button,
+nav button.active {
+  background:#2f80ed !important;
+  border-color:#2f80ed !important;
+  color:#ffffff !important;
+}
+button:hover:not(:disabled),
+button.secondary:hover:not(:disabled),
+button.small:hover:not(:disabled),
+nav button:hover,
+nav button.active:hover {
+  background:#1f5fae !important;
+  border-color:#1f5fae !important;
+  color:#ffffff !important;
+}
+
+/* Exceptions */
+button.success,
+button.start,
+button[id*="start" i],
+button[class*="start" i] {
+  background:#2a9d6f !important;
+  border-color:#2a9d6f !important;
+  color:#ffffff !important;
+}
+button.warning,
+button.pause,
+button[id*="pause" i],
+button[class*="pause" i] {
+  background:#d89a2f !important;
+  border-color:#d89a2f !important;
+  color:#ffffff !important;
+}
+button.stop,
+button[id*="stop" i],
+button[class*="stop" i] {
+  background:#64748b !important;
+  border-color:#64748b !important;
+  color:#ffffff !important;
+}
+button.danger,
+button.delete,
+button[id*="delete" i],
+button[class*="delete" i] {
+  background:#d45d69 !important;
+  border-color:#d45d69 !important;
+  color:#ffffff !important;
+}
+
 </style>
 </head>
 <body>
