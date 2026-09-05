@@ -2933,12 +2933,14 @@ function drawQr(containerId,text,size){
    const canvas=temp.querySelector("canvas");
    const generatedImg=temp.querySelector("img");
 
+   // IMPORTANT: do not change canvas.width/canvas.height here;
+   // doing so clears the QR drawing.
    if(canvas){
-    canvas.width=px;
-    canvas.height=px;
     try{src=canvas.toDataURL("image/png");}catch(e){}
    }
-   if(!src && generatedImg)src=generatedImg.src;
+   if(!src && generatedImg && generatedImg.src){
+    src=generatedImg.src;
+   }
 
    if(!src){
     setTimeout(finish,25);
@@ -2950,20 +2952,18 @@ function drawQr(containerId,text,size){
    img.alt="QR Code";
    img.width=px;
    img.height=px;
-   img.setAttribute("width",String(px));
-   img.setAttribute("height",String(px));
    img.style.cssText=[
-    `width:${px}px !important`,
-    `height:${px}px !important`,
-    `min-width:${px}px !important`,
-    `min-height:${px}px !important`,
-    `max-width:${px}px !important`,
-    `max-height:${px}px !important`,
-    "display:block !important",
-    "margin:0 auto !important",
-    "object-fit:fill !important",
-    "aspect-ratio:1 / 1 !important",
-    "transform:none !important"
+    `width:${px}px`,
+    `height:${px}px`,
+    `min-width:${px}px`,
+    `min-height:${px}px`,
+    `max-width:${px}px`,
+    `max-height:${px}px`,
+    "display:block",
+    "margin:0 auto",
+    "object-fit:contain",
+    "aspect-ratio:1 / 1",
+    "transform:none"
    ].join(";");
 
    c.innerHTML="";
@@ -2971,7 +2971,7 @@ function drawQr(containerId,text,size){
    temp.remove();
   };
 
-  setTimeout(finish,30);
+  setTimeout(finish,40);
  }catch(e){
   temp.remove();
   console.error("QR generation failed:",e);
