@@ -436,6 +436,33 @@ button[class*="delete" i] {
   color:#ffffff !important;
 }
 
+
+/* Orange action buttons: Disable, Edit, Edit Name, Pause */
+button.warning,
+button.pause,
+button[id*="pause" i],
+button[class*="pause" i],
+button[id*="edit" i],
+button[class*="edit" i],
+button[id*="disable" i],
+button[class*="disable" i] {
+  background:#f59e0b !important;
+  border-color:#f59e0b !important;
+  color:#ffffff !important;
+}
+button.warning:hover:not(:disabled),
+button.pause:hover:not(:disabled),
+button[id*="pause" i]:hover:not(:disabled),
+button[class*="pause" i]:hover:not(:disabled),
+button[id*="edit" i]:hover:not(:disabled),
+button[class*="edit" i]:hover:not(:disabled),
+button[id*="disable" i]:hover:not(:disabled),
+button[class*="disable" i]:hover:not(:disabled) {
+  background:#d97706 !important;
+  border-color:#d97706 !important;
+  color:#ffffff !important;
+}
+
 </style>
 </head>
 <body>
