@@ -531,6 +531,35 @@ header .skidtracker-brand-logo{
   justify-content:center !important;
 }
 
+
+/* Keep opened QR square and centered — never stretch */
+.qrbox canvas, .qrbox img,
+.qr-container canvas, .qr-container img,
+#qrCode canvas, #qrCode img,
+#qrcode canvas, #qrcode img,
+[id*="qrCode"] canvas, [id*="qrCode"] img,
+[id*="qrcode"] canvas, [id*="qrcode"] img {
+  display:block !important;
+  width:auto !important;
+  height:auto !important;
+  max-width:min(320px, 90vw) !important;
+  max-height:min(320px, 90vw) !important;
+  aspect-ratio:1 / 1 !important;
+  object-fit:contain !important;
+  margin:0 auto !important;
+  flex:none !important;
+}
+.qrbox, .qr-container,
+#qrCode, #qrcode,
+[id*="qrCode"], [id*="qrcode"] {
+  width:auto !important;
+  height:auto !important;
+  max-width:100% !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  text-align:center !important;
+}
+
 </style>
 </head>
 <body>
