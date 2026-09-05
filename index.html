@@ -562,7 +562,7 @@ header .skidtracker-brand-logo{
    <br><br><button class="success">Sign In</button>
   </form>
   <p style="text-align:center;margin:14px 0 0">
-   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button>
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="openRecoveryCodeScreen()">I Have a Recovery Code</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button>
   </p>
   <div id="loginMessage" class="status"></div>
  </div>
@@ -570,13 +570,32 @@ header .skidtracker-brand-logo{
 
 
 
-<div id="resetScreen" class="hidden"><div class="login"><div class="logo">🔐</div><h1>Reset Password</h1>
-<p class="muted" style="text-align:center">Choose a new password.</p>
-<form id="resetForm">
-<label>New Password</label><input id="resetPassword" type="password" required minlength="6" autocomplete="new-password">
-<label>Confirm New Password</label><input id="resetPasswordConfirm" type="password" required minlength="6" autocomplete="new-password">
-<br><br><button class="success">Update Password</button>
-</form><div id="resetMessage" class="status"></div></div></div>
+<div id="resetScreen" class="hidden">
+ <div class="login">
+  <div class="logo">🔐</div>
+  <h1>Reset Password</h1>
+  <p class="muted" style="text-align:center">Enter the recovery code from your email, then choose a new password.</p>
+  <form id="resetForm">
+   <label>Email</label>
+   <input id="recoveryEmail" type="email" required autocomplete="email">
+
+   <label>Recovery Code</label>
+   <input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code"
+          required maxlength="12" placeholder="Enter recovery code">
+
+   <label>New Password</label>
+   <input id="resetPassword" type="password" required minlength="6" autocomplete="new-password">
+
+   <label>Confirm New Password</label>
+   <input id="resetPasswordConfirm" type="password" required minlength="6" autocomplete="new-password">
+
+   <br><br>
+   <button class="success">Verify Code & Update Password</button>
+   <button type="button" class="secondary" onclick="showLogin()">Cancel</button>
+  </form>
+  <div id="resetMessage" class="status"></div>
+ </div>
+</div>
 <div id="appScreen" class="hidden">
 <header>
  <div class="brand-wrap">
@@ -801,29 +820,7 @@ function showLogin(){
 }
 
 async function checkSession(){
- const authHash=new URLSearchParams(location.hash.replace(/^#/,""));
- const authQuery=new URLSearchParams(location.search);
- const authError=authHash.get("error_description") || authQuery.get("error_description");
- if(authError){
-  hideAuthScreens();
-  $("appScreen").classList.add("hidden");
-  $("loginScreen").classList.remove("hidden");
-  setStatus("loginMessage","Password reset link error: "+decodeURIComponent(authError),"error");
-  return;
- }
-
- // Supabase emits PASSWORD_RECOVERY only after the recovery link has
- // been exchanged for a valid session. Show the reset form at that point.
  sb.auth.onAuthStateChange(async (event,session)=>{
-  if(event==="PASSWORD_RECOVERY"){
-   currentUser=session?.user||null;
-   hideAuthScreens();
-   $("appScreen").classList.add("hidden");
-   $("resetScreen").classList.remove("hidden");
-   setStatus("resetMessage","Recovery link verified. Enter a new password.","success");
-   return;
-  }
-
   if(event==="SIGNED_OUT"){
    currentUser=null;
    currentProfile=null;
@@ -834,36 +831,16 @@ async function checkSession(){
  const {data:{session},error}=await sb.auth.getSession();
  if(error)console.error("Session error:",error);
 
- // For a recovery callback, allow Supabase to finish processing the URL.
- // The PASSWORD_RECOVERY event above will open the reset form.
- const hash=new URLSearchParams(location.hash.replace(/^#/,""));
- const query=new URLSearchParams(location.search);
- const recoveryCallback=
-  hash.get("type")==="recovery" ||
-  query.get("type")==="recovery" ||
-  query.has("code");
-
- if(recoveryCallback){
-  if(session){
-   currentUser=session.user;
-   hideAuthScreens();
-   $("appScreen").classList.add("hidden");
-   $("resetScreen").classList.remove("hidden");
-   setStatus("resetMessage","Recovery link verified. Enter a new password.","success");
-  }else{
-   hideAuthScreens();
-   $("appScreen").classList.add("hidden");
-   $("resetScreen").classList.remove("hidden");
-   setStatus("resetMessage","Verifying recovery link...","");
-  }
-  return;
- }
-
  if(session){
   currentUser=session.user;
   await openApplication();
  }else{
   showLogin();
+
+  const savedRecoveryEmail=localStorage.getItem("skidtracker_recovery_email");
+  if(savedRecoveryEmail && $("recoveryEmail")){
+   $("recoveryEmail").value=savedRecoveryEmail;
+  }
  }
 }
 
@@ -955,6 +932,20 @@ async function forgotUsername(){
  $("loginUsername").value=username;
 }
 
+
+function openRecoveryCodeScreen(){
+ hideAuthScreens();
+ $("appScreen").classList.add("hidden");
+ $("resetScreen").classList.remove("hidden");
+
+ const savedEmail=localStorage.getItem("skidtracker_recovery_email")||"";
+ if($("recoveryEmail"))$("recoveryEmail").value=savedEmail;
+ if($("recoveryCode"))$("recoveryCode").value="";
+ if($("resetPassword"))$("resetPassword").value="";
+ if($("resetPasswordConfirm"))$("resetPasswordConfirm").value="";
+ setStatus("resetMessage","Enter the recovery code from your email.","");
+}
+
 async function forgotPassword(){
  const email=prompt("Enter the email address associated with your account:");
  if(email===null)return;
@@ -964,27 +955,33 @@ async function forgotPassword(){
   return alert("Please enter your email address.");
  }
 
- setStatus("loginMessage","Sending password reset email...");
+ setStatus("loginMessage","Sending recovery code...");
 
- // Return the recovery link to the same deployed SkidTracker site.
- const redirectTo="https://skidtrack.vercel.app/";
-
- const {error}=await sb.auth.resetPasswordForEmail(cleanEmail,{
-  redirectTo
- });
+ // Supabase sends the recovery email. The email template must display {{ .Token }}
+ // so the employee can type the recovery code into SkidTracker.
+ const {error}=await sb.auth.resetPasswordForEmail(cleanEmail);
 
  if(error){
-  console.error("Password reset email error:",error);
+  console.error("Recovery code email error:",error);
   return setStatus(
    "loginMessage",
-   "Could not send reset email: "+error.message,
+   "Could not send recovery code: "+error.message,
    "error"
   );
  }
 
+ localStorage.setItem("skidtracker_recovery_email",cleanEmail);
+
+ hideAuthScreens();
+ $("appScreen").classList.add("hidden");
+ $("resetScreen").classList.remove("hidden");
+ $("recoveryEmail").value=cleanEmail;
+ $("recoveryCode").value="";
+ $("resetPassword").value="";
+ $("resetPasswordConfirm").value="";
  setStatus(
-  "loginMessage",
-  "Password reset email sent. Check your inbox and spam folder, then open the link to choose a new password.",
+  "resetMessage",
+  "Recovery email sent. Enter the code from the email below.",
   "success"
  );
 }
@@ -992,9 +989,17 @@ async function forgotPassword(){
 async function resetPassword(e){
  e.preventDefault();
 
+ const email=$("recoveryEmail").value.trim().toLowerCase();
+ const code=$("recoveryCode").value.trim().replace(/\s+/g,"");
  const password=$("resetPassword").value;
  const confirmPassword=$("resetPasswordConfirm").value;
 
+ if(!email){
+  return setStatus("resetMessage","Enter your email address.","error");
+ }
+ if(!code){
+  return setStatus("resetMessage","Enter the recovery code from your email.","error");
+ }
  if(password.length<6){
   return setStatus("resetMessage","Password must be at least 6 characters.","error");
  }
@@ -1002,29 +1007,48 @@ async function resetPassword(e){
   return setStatus("resetMessage","Passwords do not match.","error");
  }
 
+ setStatus("resetMessage","Verifying recovery code...");
+
+ const {data:verifyData,error:verifyError}=await sb.auth.verifyOtp({
+  email,
+  token:code,
+  type:"recovery"
+ });
+
+ if(verifyError){
+  console.error("Recovery code verification error:",verifyError);
+  return setStatus(
+   "resetMessage",
+   "Recovery code is invalid or expired. Request a new code and try again.",
+   "error"
+  );
+ }
+
+ if(!verifyData?.session){
+  return setStatus(
+   "resetMessage",
+   "Recovery code was accepted, but no recovery session was created. Request a new code and try again.",
+   "error"
+  );
+ }
+
  setStatus("resetMessage","Updating password...");
 
- // Confirm that the recovery link produced an authenticated session.
- const {data:{session},error:sessionError}=await sb.auth.getSession();
- if(sessionError){
-  console.error("Recovery session error:",sessionError);
-  return setStatus("resetMessage","Could not verify the recovery session. Open a new reset link from your email.","error");
- }
- if(!session){
-  return setStatus("resetMessage","Recovery session is missing or expired. Request a new password reset email.","error");
+ const {error:updateError}=await sb.auth.updateUser({password});
+ if(updateError){
+  console.error("Password update error:",updateError);
+  return setStatus("resetMessage",updateError.message,"error");
  }
 
- const {error}=await sb.auth.updateUser({password});
- if(error){
-  console.error("Password update error:",error);
-  return setStatus("resetMessage",error.message,"error");
- }
-
+ localStorage.removeItem("skidtracker_recovery_email");
  await sb.auth.signOut();
- history.replaceState({},document.title,location.pathname);
  $("resetForm").reset();
  showLogin();
- setStatus("loginMessage","Password updated successfully. Sign in with your username and new password.","success");
+ setStatus(
+  "loginMessage",
+  "Password updated successfully. Sign in with your username and new password.",
+  "success"
+ );
 }
 async function logout(){await stopScanner();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
 
