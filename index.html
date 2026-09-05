@@ -956,51 +956,35 @@ async function forgotUsername(){
 }
 
 async function forgotPassword(){
- const username=prompt("Enter your username to reset your password:");
- if(username===null)return;
+ const email=prompt("Enter the email address associated with your account:");
+ if(email===null)return;
 
- const cleanUsername=username.trim();
- if(!cleanUsername)return alert("Please enter your username.");
+ const cleanEmail=email.trim().toLowerCase();
+ if(!cleanEmail){
+  return alert("Please enter your email address.");
+ }
 
- setStatus("loginMessage","Looking up account...");
+ setStatus("loginMessage","Sending password reset email...");
 
- const {data:loginEmail,error:lookupError}=await sb.rpc(
-  "get_login_email",
-  {p_username:cleanUsername}
- );
+ // Return the recovery link to the same deployed SkidTracker site.
+ const redirectTo=location.origin + location.pathname;
 
- if(lookupError){
-  console.error("Password reset username lookup error:",lookupError);
+ const {error}=await sb.auth.resetPasswordForEmail(cleanEmail,{
+  redirectTo
+ });
+
+ if(error){
+  console.error("Password reset email error:",error);
   return setStatus(
    "loginMessage",
-   "Password reset is not configured correctly. Check the get_login_email function in Supabase.",
+   "Could not send reset email: "+error.message,
    "error"
   );
  }
 
- // Keep the account response generic while still allowing Supabase to send
- // the actual recovery message to the matching Auth email address.
- if(!loginEmail){
-  return setStatus(
-   "loginMessage",
-   "If that username exists, password reset instructions will be sent.",
-   "success"
-  );
- }
-
- const redirectTo=APP_URL;
- setStatus("loginMessage","Sending password reset email...");
-
- const {error}=await sb.auth.resetPasswordForEmail(loginEmail,{redirectTo});
-
- if(error){
-  console.error("Password reset email error:",error);
-  return setStatus("loginMessage","Could not send reset email: "+error.message,"error");
- }
-
  setStatus(
   "loginMessage",
-  "Password reset email sent. Open the link in that email to choose a new password.",
+  "Password reset email sent. Check your inbox and spam folder, then open the link to choose a new password.",
   "success"
  );
 }
