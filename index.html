@@ -1100,7 +1100,8 @@ async function openApplication(){
 
  // New employee accounts must replace their temporary password before
  // they can use SkidTracker.
- if(currentProfile?.must_reset_password===true){
+ const resetCompleted=currentUser?.user_metadata?.first_login_password_reset_complete===true;
+ if(currentProfile?.must_reset_password===true && !resetCompleted){
   openFirstLoginPasswordReset();
   return;
  }
@@ -1146,7 +1147,15 @@ async function saveFirstLoginPassword(){
  }
  setStatus("firstLoginPasswordMessage","Updating password...");
 
- const {error:passwordError}=await sb.auth.updateUser({password});
+ const existingMeta=currentUser?.user_metadata||{};
+ const {data:updateData,error:passwordError}=await sb.auth.updateUser({
+  password,
+  data:{
+   ...existingMeta,
+   first_login_password_reset_complete:true
+  }
+ });
+
  if(passwordError){
   if(btn){
    btn.disabled=false;
@@ -1155,25 +1164,24 @@ async function saveFirstLoginPassword(){
   return setStatus("firstLoginPasswordMessage",passwordError.message,"error");
  }
 
+ // Refresh the signed-in user immediately so the first-login gate cannot
+ // trap the employee even if profile RLS blocks the flag update.
+ if(updateData?.user)currentUser=updateData.user;
+
+ // Best-effort profile sync. Auth metadata above is the authoritative flag.
  const {error:profileError}=await sb
   .from("profiles")
   .update({must_reset_password:false})
   .eq("id",currentUser.id);
 
  if(profileError){
-  if(btn){
-   btn.disabled=false;
-   btn.textContent="Set Password & Continue";
-  }
-  return setStatus(
-   "firstLoginPasswordMessage",
-   "Password changed, but the first-login flag could not be cleared: "+profileError.message,
-   "error"
-  );
+  console.warn("Password changed; profile reset flag sync was blocked:",profileError.message);
  }
 
- currentProfile.must_reset_password=false;
+ if(currentProfile)currentProfile.must_reset_password=false;
+
  closeModal();
+ setStatus("loginMessage","");
  await openApplication();
 }
 
@@ -2546,7 +2554,7 @@ function renderEmployees(){
    <td><span class="badge ${isActive?"active":"out_of_service"}">${isActive?"Active":"Disabled"}</span></td>
    <td>
     <div class="actions">
-     <button type="button" class="small warning" onclick="editEmployee('${p.id}')">Edit Name</button>
+     <button type="button" class="small warning" onclick="editEmployee('${p.id}')">Edit</button>
      ${
       isActive
        ? `<button type="button" class="small danger" onclick="deleteEmployee('${p.id}')" ${isSelf?"disabled title=\"You cannot delete your own account\"":""}>Disable</button>`
@@ -2727,68 +2735,147 @@ async function addEmployee(){
 }
 
 function editEmployee(id){
- const p=allProfiles.find(x=>x.id===id);
+ const p=allProfiles.find(x=>String(x.id)===String(id));
  if(!p)return alert("Employee not found.");
+
+ const isSelf=String(p.id)===String(currentUser?.id);
+ const isAdminAccount=p.role==="admin";
+
+ const roleOptions=isAdminAccount
+  ? `<option value="admin" selected>Admin</option>`
+  : `
+    <option value="technician" ${p.role==="technician"?"selected":""}>Technician</option>
+    <option value="manager" ${p.role==="manager"?"selected":""}>Manager</option>
+    <option value="pipe_fitter" ${p.role==="pipe_fitter"?"selected":""}>Pipe Fitter</option>
+    <option value="electrician" ${p.role==="electrician"?"selected":""}>Electrician</option>
+    <option value="laborer" ${p.role==="laborer"?"selected":""}>Laborer</option>
+    <option value="welder" ${p.role==="welder"?"selected":""}>Welder</option>
+    <option value="superviser" ${p.role==="superviser"?"selected":""}>Superviser</option>`;
 
  openModal(`
   <h2>Edit Employee</h2>
-  <label>Name</label>
-  <input id="mEmpName" value="${esc(p.full_name)}">
+
+  <label>Full Name</label>
+  <input id="mEmpName" value="${esc(p.full_name||"")}">
+
   <label>Username</label>
   <input id="mEmpUsername" value="${esc(p.username||"")}" autocomplete="off">
-  <p class="muted">Usernames must be unique. Role changes are made directly from the Employees dashboard. Admin roles are locked.</p>
+
+  <label>Role</label>
+  <select id="mEmpRole" ${isAdminAccount?"disabled":""}>
+   ${roleOptions}
+  </select>
+  ${isAdminAccount?'<p class="muted">The Admin role is protected.</p>':""}
+
+  <label>Status</label>
+  <select id="mEmpActive" ${isSelf?"disabled":""}>
+   <option value="true" ${p.active!==false?"selected":""}>Active</option>
+   <option value="false" ${p.active===false?"selected":""}>Disabled</option>
+  </select>
+  ${isSelf?'<p class="muted">You cannot disable your own account.</p>':""}
+
+  <label>First Login Password Reset</label>
+  <select id="mEmpReset">
+   <option value="false" ${p.must_reset_password!==true?"selected":""}>Not Required</option>
+   <option value="true" ${p.must_reset_password===true?"selected":""}>Require Password Change</option>
+  </select>
+  <p class="muted">Choose “Require Password Change” to force this employee to set a new password on their next login.</p>
+
   <br>
-  <button type="button" class="success" onclick="saveEmployee('${id}')">Save</button>
+  <button type="button" id="saveEmployeeBtn" class="success" onclick="saveEmployee('${id}')">Save Employee</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+  <div id="editEmployeeMessage" class="status"></div>
  `);
 }
 
 async function saveEmployee(id){
+ if(!admin())return alert("Admin access required.");
+
+ const p=allProfiles.find(x=>String(x.id)===String(id));
+ if(!p)return alert("Employee not found.");
+
  const fullName=$("mEmpName").value.trim();
  const username=$("mEmpUsername").value.trim().toLowerCase();
+ const requestedRole=$("mEmpRole").value;
+ const requestedActive=$("mEmpActive").value==="true";
+ const mustReset=$("mEmpReset").value==="true";
+ const isSelf=String(id)===String(currentUser?.id);
+ const isAdminAccount=p.role==="admin";
+ const btn=$("saveEmployeeBtn");
 
  if(!fullName){
-  return alert("Employee name is required.");
+  return setStatus("editEmployeeMessage","Employee name is required.","error");
  }
 
  if(!/^[a-z0-9._-]{3,40}$/.test(username)){
-  return alert("Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.");
+  return setStatus(
+   "editEmployeeMessage",
+   "Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.",
+   "error"
+  );
  }
 
  const duplicate=allProfiles.find(
-  p=>p.id!==id && String(p.username||"").toLowerCase()===username
+  other=>String(other.id)!==String(id) &&
+  String(other.username||"").toLowerCase()===username
  );
-
  if(duplicate){
-  return alert("That username is already assigned to another employee.");
+  return setStatus("editEmployeeMessage","That username is already assigned to another employee.","error");
  }
+
+ const allowedRoles=["technician","manager","pipe_fitter","electrician","laborer","welder","superviser"];
+ const role=isAdminAccount ? "admin" : requestedRole;
+
+ if(!isAdminAccount && !allowedRoles.includes(role)){
+  return setStatus("editEmployeeMessage","Invalid employee role.","error");
+ }
+
+ const active=isSelf ? true : requestedActive;
+
+ if(btn){
+  btn.disabled=true;
+  btn.textContent="Saving...";
+ }
+
+ const payload={
+  full_name:fullName,
+  username,
+  role,
+  active,
+  must_reset_password:mustReset
+ };
 
  const {data,error}=await sb
   .from("profiles")
-  .update({
-   full_name:fullName,
-   username:username
-  })
+  .update(payload)
   .eq("id",id)
-  .select("id,full_name,username,role,active");
+  .select("*");
+
+ if(btn){
+  btn.disabled=false;
+  btn.textContent="Save Employee";
+ }
 
  if(error){
   console.error(error);
   if(error.code==="23505"){
-   return alert("That username is already in use.");
+   return setStatus("editEmployeeMessage","That username is already in use.","error");
   }
-  return alert("Could not update employee: "+error.message);
+  return setStatus("editEmployeeMessage","Could not update employee: "+error.message,"error");
  }
 
  if(!data || data.length===0){
-  return alert("Employee was not updated. Check your Supabase admin update RLS policy.");
+  return setStatus(
+   "editEmployeeMessage",
+   "Employee was not updated. Check the Supabase admin profile UPDATE policy.",
+   "error"
+  );
  }
 
  closeModal();
  await refreshAllData();
- alert("Employee name and username updated.");
+ alert("Employee information updated.");
 }
-
 
 async function changeEmployeeRole(id,newRole){
  if(!admin())return alert("Admin access required.");
