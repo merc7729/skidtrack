@@ -3371,9 +3371,38 @@ function showQr(id){
 }
 
 function viewSkid(id){
- const s=allSkids.find(x=>x.id===id);if(!s)return;
- const rs=allWorkRecords.filter(r=>r.skids?.id===id||r.skid_id===id);
- openModal(`<h2>${esc(s.skid_number)}</h2><p><b>Status:</b> ${esc(s.status)}</p><div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div><h3>Service History</h3><div class="table-wrap"><table><tbody>${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}</tbody></table></div><br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+ const s=allSkids.find(x=>String(x.id)===String(id));if(!s)return;
+ const rs=allWorkRecords.filter(r=>String(r.skids?.id||r.skid_id||"")===String(id));
+
+ const assignedCodes=assignedWtCodesForSkid(s);
+ const assignedTickets=assignedCodes.map(code=>{
+  const wt=wtNumbers.find(v=>String(v.code||"")===String(code));
+  return {
+   code:String(code||""),
+   description:wt?.description||""
+  };
+ });
+
+ const assignedHtml=assignedTickets.length
+  ? `<div class="table-wrap"><table>
+      <thead><tr><th>Work Ticket</th><th>Description</th></tr></thead>
+      <tbody>${assignedTickets.map(w=>`<tr><td><b>${esc(w.code)}</b></td><td>${esc(w.description||"—")}</td></tr>`).join("")}</tbody>
+     </table></div>`
+  : '<p class="muted">No work tickets assigned to this skid.</p>';
+
+ openModal(`<h2>${esc(s.skid_number)}</h2>
+  <p><b>Status:</b> ${esc(s.status)}</p>
+  <div class="qrbox"><div id="qrCanvas" class="qr-container"></div></div>
+
+  <h3>Assigned Work Tickets</h3>
+  ${assignedHtml}
+
+  <h3>Service History</h3>
+  <div class="table-wrap"><table><tbody>
+   ${rs.map(r=>`<tr><td>${fmt(r.performed_at)}</td><td>${esc(r.work_performed)}</td><td>${r.time_spent}</td><td>${esc(r.profiles?.full_name||r.technician_name||"Former Employee")}</td></tr>`).join("")||'<tr><td class="empty">No work history.</td></tr>'}
+  </tbody></table></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+
  setTimeout(()=>drawQr("qrCanvas",skidUrl(s),240),50);
 }
 
