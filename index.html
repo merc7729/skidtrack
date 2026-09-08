@@ -1331,9 +1331,11 @@ function openAddWtDatabase(){
  if(!admin())return alert("Admin access required.");
 
  openModal(`<h2>Add WT/Descriptions to Database</h2>
-  <p class="muted">Enter multiple rows below. Use one WT per line in this format:</p>
-  <p><b>SO# | WT# | Description</b></p>
-  <textarea id="wtDatabaseBulk" rows="12" placeholder="0007303 | 0007303-003-100 | BF Skid-ST/Coat&#10;0007303 | 0007303-003-105 | BF Skid-EIVS"></textarea>
+  <p class="muted">Paste multiple rows from Excel, CSV, or plain text. Supported formats:</p>
+  <p><b>SO# | WT# | Description</b><br>
+     <b>SO# [TAB] WT# [TAB] Description</b><br>
+     <b>WT# | Description</b> (SO is detected from the WT number)</p>
+  <textarea id="wtDatabaseBulk" rows="12" placeholder="0007303	0007303-003-100	BF Skid-ST/Coat&#10;0007303-003-105 | BF Skid-EIVS"></textarea>
   <div id="wtDatabaseMessage" class="status"></div>
   <br>
   <button type="button" class="success" onclick="saveWtDatabaseBulk()">Add WT/Descriptions</button>
@@ -1353,35 +1355,103 @@ async function saveWtDatabaseBulk(){
  const rows=[];
  const invalid=[];
 
- lines.forEach((line,index)=>{
-  const parts=line.split("|").map(v=>v.trim());
-  if(parts.length<3){
-   invalid.push(index+1);
-   return;
+ function parseWtLine(line){
+  let parts=[];
+
+  // Best for direct copy/paste from Excel or Google Sheets.
+  if(line.includes("\t")){
+   parts=line.split("\t").map(v=>v.trim()).filter(Boolean);
+  }
+  // Original pipe-separated format.
+  else if(line.includes("|")){
+   parts=line.split("|").map(v=>v.trim()).filter(Boolean);
+  }
+  // CSV format.
+  else if(line.includes(",")){
+   parts=line.split(",").map(v=>v.trim()).filter(Boolean);
+  }
+  // Finally accept ordinary pasted text. Find a WT code and treat everything
+  // after it as the description.
+  else{
+   const wtMatch=line.match(/\b\d{4,}(?:-\d+[A-Za-z0-9]*){1,}\b/);
+   if(wtMatch){
+    const before=line.slice(0,wtMatch.index).trim();
+    const wt=wtMatch[0].trim();
+    const after=line.slice((wtMatch.index||0)+wt.length).replace(/^[\s\-–—:;,]+/,"").trim();
+    parts=before ? [before,wt,after] : [wt,after];
+   }else{
+    parts=line.split(/\s{2,}/).map(v=>v.trim()).filter(Boolean);
+   }
   }
 
-  const so=parts.shift();
-  const wt=parts.shift();
-  const description=parts.join(" | ").trim();
+  let so="";
+  let wt="";
+  let description="";
 
-  if(!so || !wt || !description){
-   invalid.push(index+1);
-   return;
+  if(parts.length>=3){
+   so=parts[0];
+   wt=parts[1];
+   description=parts.slice(2).join(" | ").trim();
+  }else if(parts.length===2){
+   // WT + Description. Infer SO from the first numeric segment of the WT.
+   wt=parts[0];
+   description=parts[1];
+   const soMatch=String(wt).match(/^(\d{4,})(?:-|$)/);
+   so=soMatch ? soMatch[1] : "";
   }
 
-  rows.push({
+  so=String(so||"").trim();
+  wt=String(wt||"").trim();
+  description=String(description||"").trim();
+
+  // Handle cases where the first two columns were accidentally reversed.
+  const firstLooksWt=/^\d{4,}(?:-\d+[A-Za-z0-9]*)+$/i.test(so);
+  const secondLooksSo=/^\d{4,}$/.test(wt);
+  if(firstLooksWt && secondLooksSo){
+   const tmp=so; so=wt; wt=tmp;
+  }
+
+  // If SO was omitted or malformed, derive it from WT where possible.
+  if(!/^\d{4,}$/.test(so)){
+   const inferred=wt.match(/^(\d{4,})(?:-|$)/);
+   if(inferred)so=inferred[1];
+  }
+
+  if(!so || !wt || !description)return null;
+
+  return {
    so_number:so,
    wt_number:wt,
    description:description
-  });
+  };
+ }
+
+ lines.forEach((line,index)=>{
+  // Ignore a common header row.
+  if(index===0 && /\bSO\b/i.test(line) && /\bWT\b/i.test(line) && /description/i.test(line)){
+   return;
+  }
+
+  const parsed=parseWtLine(line);
+  if(!parsed){
+   invalid.push(index+1);
+   return;
+  }
+  rows.push(parsed);
  });
 
  if(invalid.length){
+  const shown=invalid.slice(0,12).join(", ");
+  const extra=invalid.length>12 ? " and "+(invalid.length-12)+" more" : "";
   return setStatus(
    "wtDatabaseMessage",
-   "Fix line(s) "+invalid.join(", ")+". Use: SO# | WT# | Description",
+   "Could not read line(s) "+shown+extra+". Paste from Excel/Sheets, use SO | WT | Description, or WT | Description.",
    "error"
   );
+ }
+
+ if(!rows.length){
+  return setStatus("wtDatabaseMessage","No WT/Description rows were found.","error");
  }
 
  // Deduplicate by WT number before sending to Supabase.
