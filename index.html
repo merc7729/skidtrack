@@ -1589,74 +1589,85 @@ async function saveMultipleWtAssignments(){
 }
 
 
+function getAssignmentSoForSkid(skid){
+ if(!skid)return "";
+
+ const skidNumber=String(skid.skid_number||"").trim();
+
+ // Keep the app's existing special skid mapping.
+ const special=getSpecialWtCodesForSelectedSkid(skidNumber);
+ if(special?.so)return String(special.so).trim();
+
+ // Use the same matching rule already used in Log Work:
+ // skid first 4 digits = SO last 4 digits.
+ const skidDigits=skidNumber.replace(/\D/g,"");
+ const skidFirst4=skidDigits.slice(0,4);
+ if(!skidFirst4)return "";
+
+ const availableSos=[...new Set(
+  wtNumbers.map(v=>String(v.so||"").trim()).filter(Boolean)
+ )];
+
+ return availableSos.find(so=>{
+  const soDigits=so.replace(/\D/g,"");
+  return soDigits.slice(-4)===skidFirst4;
+ }) || "";
+}
+
 function assignWtToSkid(id){
  const skid=allSkids.find(s=>String(s.id)===String(id));
  if(!skid)return alert("Skid not found.");
 
+ const skidSo=getAssignmentSoForSkid(skid);
+
+ if(!skidSo){
+  return openModal(`<h2>Assign WT/Description</h2>
+   <p><b>Skid:</b> ${esc(skid.skid_number||"")}</p>
+   <div class="status error">No matching SO number was found for this skid.</div>
+   <p class="muted">WT/Descriptions can only be assigned from the same SO number as the skid.</p>
+   <br>
+   <button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+ }
+
  const assigned=new Set(assignedWtCodesForSkid(skid));
 
- const options=wtNumbers.map(v=>{
+ // Only show WT/Descriptions that belong to this skid's matched SO.
+ const matchingWt=wtNumbers.filter(v=>
+  String(v.so||"").trim()===skidSo
+ );
+
+ const options=matchingWt.map(v=>{
   const code=String(v.code||"");
-  const so=String(v.so||"");
   const checked=assigned.has(code) ? "checked" : "";
-  return `<label class="wtAssignRow" data-so="${esc(so.toLowerCase())}" data-wt="${esc(code.toLowerCase())}" style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin:7px 0">
+  return `<label class="wtAssignRow" style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin:7px 0">
    <input type="checkbox" class="wtAssignCheck" value="${esc(code)}" ${checked} style="width:auto;margin-top:3px">
-   <span><b>SO ${esc(so||"—")}</b> &nbsp; <b>${esc(code)}</b> — ${esc(v.description||"")}</span>
+   <span><b>${esc(code)}</b> — ${esc(v.description||"")}</span>
   </label>`;
  }).join("");
 
  openModal(`<h2>Assign WT/Description</h2>
   <p><b>Skid:</b> ${esc(skid.skid_number||"")}</p>
-  <p class="muted">Search by SO number, then select the WT/Descriptions that should be available for this skid in Log Work.</p>
-
-  <label>Search by SO</label>
-  <input id="wtAssignSoSearch" type="search" placeholder="Enter SO number, e.g. 0007303" oninput="filterWtAssignmentsBySo()">
+  <p><b>SO Number:</b> ${esc(skidSo)}</p>
+  <p class="muted">Only WT/Descriptions for this skid's SO number are shown.</p>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-   <button type="button" class="small secondary" onclick="selectVisibleWtAssignments(true)">Select Visible</button>
-   <button type="button" class="small secondary" onclick="selectVisibleWtAssignments(false)">Clear Visible</button>
-   <span id="wtAssignSearchCount" class="muted" style="align-self:center"></span>
+   <button type="button" class="small secondary" onclick="selectVisibleWtAssignments(true)">Select All</button>
+   <button type="button" class="small secondary" onclick="selectVisibleWtAssignments(false)">Clear All</button>
+   <span class="muted" style="align-self:center">${matchingWt.length} WT/Description${matchingWt.length===1?"":"s"}</span>
   </div>
 
-  <div id="wtAssignList" style="max-height:420px;overflow:auto;border:1px solid #dbe3ea;border-radius:8px;padding:12px">${options}</div>
-  <div id="wtAssignNoResults" class="muted hidden" style="padding:12px 0">No WT/Descriptions found for that SO number.</div>
+  <div id="wtAssignList" style="max-height:420px;overflow:auto;border:1px solid #dbe3ea;border-radius:8px;padding:12px">
+   ${options || '<p class="muted">No WT/Descriptions are stored for this SO number.</p>'}
+  </div>
 
   <br>
   <button type="button" class="success" onclick="saveWtAssignments('${id}')">Save Assignments</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
-
- filterWtAssignmentsBySo();
-}
-
-function filterWtAssignmentsBySo(){
- const search=String($("wtAssignSoSearch")?.value||"").trim().toLowerCase();
- const rows=[...document.querySelectorAll(".wtAssignRow")];
- let visible=0;
-
- rows.forEach(row=>{
-  const so=String(row.dataset.so||"");
-  const wt=String(row.dataset.wt||"");
-  const show=!search || so.includes(search) || wt.includes(search);
-  row.style.display=show ? "flex" : "none";
-  if(show)visible++;
- });
-
- if($("wtAssignSearchCount")){
-  $("wtAssignSearchCount").textContent=
-   search ? visible+" matching WT/Description"+(visible===1?"":"s") : rows.length+" WT/Descriptions";
- }
-
- if($("wtAssignNoResults")){
-  $("wtAssignNoResults").classList.toggle("hidden",visible!==0);
- }
 }
 
 function selectVisibleWtAssignments(checked){
- document.querySelectorAll(".wtAssignRow").forEach(row=>{
-  if(row.style.display!=="none"){
-   const box=row.querySelector(".wtAssignCheck");
-   if(box)box.checked=checked;
-  }
+ document.querySelectorAll(".wtAssignCheck").forEach(box=>{
+  box.checked=checked;
  });
 }
 
