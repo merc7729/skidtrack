@@ -2373,15 +2373,71 @@ function renderHistory(){
  }).join("") || `<tr><td colspan="${admin()?9:5}" class="empty">No records found.</td></tr>`;
 }
 
+function toDateTimeLocalValue(value){
+ if(!value)return "";
+ const d=new Date(value);
+ if(Number.isNaN(d.getTime()))return "";
+ const pad=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function dateTimeLocalToIso(value){
+ if(!value)return null;
+ const d=new Date(value);
+ return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 function editWork(id){
- const r=allWorkRecords.find(x=>x.id===id);
+ const r=allWorkRecords.find(x=>String(x.id)===String(id));
  if(!r)return alert("Work record not found.");
- openModal(`<h2>Edit Work Record</h2><label>Work Performed</label><textarea id="mWork">${esc(r.work_performed)}</textarea><label>Hours</label><input id="mHours" type="number" step=".01" value="${r.time_spent}"><label>Notes</label><textarea id="mNotes">${esc(r.notes)}</textarea><br><br><button type="button" class="success" onclick="saveWorkEdit('${id}')">Save</button> <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+
+ openModal(`<h2>Edit Work Record</h2>
+  <label>Work Performed</label>
+  <textarea id="mWork">${esc(r.work_performed)}</textarea>
+
+  <div class="row">
+   <div>
+    <label>Start Time</label>
+    <input id="mStartTime" type="datetime-local" value="${esc(toDateTimeLocalValue(r.start_time))}">
+   </div>
+   <div>
+    <label>Stop Time</label>
+    <input id="mStopTime" type="datetime-local" value="${esc(toDateTimeLocalValue(r.stop_time))}">
+   </div>
+  </div>
+
+  <label>Hours</label>
+  <input id="mHours" type="number" min="0" step=".01" value="${Number(r.time_spent||0)}">
+
+  <label>Notes</label>
+  <textarea id="mNotes">${esc(r.notes)}</textarea>
+
+  <br><br>
+  <button type="button" class="success" onclick="saveWorkEdit('${id}')">Save</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
 }
 
 async function saveWorkEdit(id){
- const {error}=await sb.from("work_records").update({work_performed:$("mWork").value.trim(),time_spent:Number($("mHours").value),notes:$("mNotes").value.trim()}).eq("id",id);
- if(error)return alert(error.message);closeModal();refreshAllData();
+ const startTime=dateTimeLocalToIso($("mStartTime")?.value||"");
+ const stopTime=dateTimeLocalToIso($("mStopTime")?.value||"");
+
+ if(startTime && stopTime && new Date(stopTime)<new Date(startTime)){
+  return alert("Stop Time cannot be earlier than Start Time.");
+ }
+
+ const payload={
+  work_performed:$("mWork").value.trim(),
+  time_spent:Number($("mHours").value),
+  notes:$("mNotes").value.trim(),
+  start_time:startTime,
+  stop_time:stopTime
+ };
+
+ const {error}=await sb.from("work_records").update(payload).eq("id",id);
+ if(error)return alert(error.message);
+
+ closeModal();
+ refreshAllData();
 }
 
 async function deleteWork(id){
