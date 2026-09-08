@@ -691,6 +691,7 @@ header .skidtracker-brand-logo{
    <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line"></textarea>
    <p class="muted">You can add one skid above, paste multiple skid numbers here, or use both. Duplicate skid numbers are skipped.</p>
    <button class="success">Add Skid(s)</button>
+   <button type="button" class="secondary" onclick="openAddWtDatabase()">+ Add WT/Descriptions to Database</button>
   </form>
   <div id="skidMessage" class="status"></div>
  </div><br>
@@ -1106,9 +1107,9 @@ async function openApplication(){
 
 async function refreshAllData(){
  if(admin()){
-  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles()]);
+  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles(),loadWtDescriptions()]);
  }else{
-  await Promise.all([loadSkids(),loadWorkRecords()]);
+  await Promise.all([loadSkids(),loadWorkRecords(),loadWtDescriptions()]);
  }
  renderDashboard();populateFilters();renderSkids();renderHistory();renderEmployees();renderReports();
 }
@@ -1300,6 +1301,114 @@ async function deleteSkid(id){
  await refreshAllData();
 }
 
+
+
+async function loadWtDescriptions(){
+ const {data,error}=await sb
+  .from("wt_descriptions")
+  .select("so_number,wt_number,description")
+  .order("so_number",{ascending:true})
+  .order("wt_number",{ascending:true});
+
+ if(error){
+  // Keep the existing built-in WT list working until the SQL migration is installed.
+  console.warn("WT database table is not available yet:",error.message);
+  return;
+ }
+
+ const dbRows=(data||[]).map(row=>({
+  so:String(row.so_number||"").trim(),
+  code:String(row.wt_number||"").trim(),
+  description:cleanSkidDescription(String(row.description||"").trim())
+ })).filter(row=>row.code && row.description);
+
+ const byCode=new Map(wtNumbers.map(row=>[String(row.code||""),row]));
+ dbRows.forEach(row=>byCode.set(row.code,row));
+ wtNumbers=[...byCode.values()];
+}
+
+function openAddWtDatabase(){
+ if(!admin())return alert("Admin access required.");
+
+ openModal(`<h2>Add WT/Descriptions to Database</h2>
+  <p class="muted">Enter multiple rows below. Use one WT per line in this format:</p>
+  <p><b>SO# | WT# | Description</b></p>
+  <textarea id="wtDatabaseBulk" rows="12" placeholder="0007303 | 0007303-003-100 | BF Skid-ST/Coat&#10;0007303 | 0007303-003-105 | BF Skid-EIVS"></textarea>
+  <div id="wtDatabaseMessage" class="status"></div>
+  <br>
+  <button type="button" class="success" onclick="saveWtDatabaseBulk()">Add WT/Descriptions</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+}
+
+async function saveWtDatabaseBulk(){
+ if(!admin())return alert("Admin access required.");
+
+ const raw=$("wtDatabaseBulk")?.value||"";
+ const lines=raw.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+
+ if(!lines.length){
+  return setStatus("wtDatabaseMessage","Enter at least one WT/Description.","error");
+ }
+
+ const rows=[];
+ const invalid=[];
+
+ lines.forEach((line,index)=>{
+  const parts=line.split("|").map(v=>v.trim());
+  if(parts.length<3){
+   invalid.push(index+1);
+   return;
+  }
+
+  const so=parts.shift();
+  const wt=parts.shift();
+  const description=parts.join(" | ").trim();
+
+  if(!so || !wt || !description){
+   invalid.push(index+1);
+   return;
+  }
+
+  rows.push({
+   so_number:so,
+   wt_number:wt,
+   description:description
+  });
+ });
+
+ if(invalid.length){
+  return setStatus(
+   "wtDatabaseMessage",
+   "Fix line(s) "+invalid.join(", ")+". Use: SO# | WT# | Description",
+   "error"
+  );
+ }
+
+ // Deduplicate by WT number before sending to Supabase.
+ const uniqueRows=[...new Map(rows.map(row=>[row.wt_number,row])).values()];
+
+ setStatus("wtDatabaseMessage","Saving "+uniqueRows.length+" WT/Description entries...");
+
+ const {error}=await sb
+  .from("wt_descriptions")
+  .upsert(uniqueRows,{onConflict:"wt_number"});
+
+ if(error){
+  console.error("WT database save error:",error);
+  const missingTable=/relation|does not exist|schema cache/i.test(error.message||"");
+  return setStatus(
+   "wtDatabaseMessage",
+   missingTable
+    ? "WT database table is not installed yet. Run the supplied wt_descriptions SQL migration in Supabase first."
+    : "Could not save WT/Descriptions: "+error.message,
+   "error"
+  );
+ }
+
+ await loadWtDescriptions();
+ closeModal();
+ alert(uniqueRows.length+" WT/Description entr"+(uniqueRows.length===1?"y":"ies")+" saved to the database.");
+}
 
 function assignedWtCodesForSkid(skid){
  if(!skid)return [];
@@ -1660,7 +1769,7 @@ async function stopWork(){
  );
 }
 
-const wtNumbers=[
+let wtNumbers=[
   {so:"0007303",code:'0007303-003-100',description:cleanSkidDescription('BF Skid-ST/Coat')},
   {so:"0007303",code:'0007303-003-105',description:cleanSkidDescription('BF Skid-EIVS')},
   {so:"0007303",code:'0007303-003-110',description:cleanSkidDescription('BF Skid- P/F-Labor')},
