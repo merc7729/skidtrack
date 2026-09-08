@@ -691,6 +691,7 @@ header .skidtracker-brand-logo{
    <textarea id="bulkSkidNumbers" placeholder="Paste one skid number per line"></textarea>
    <p class="muted">You can add one skid above, paste multiple skid numbers here, or use both. Duplicate skid numbers are skipped.</p>
    <button class="success">Add Skid(s)</button>
+   <button type="button" class="secondary" onclick="openMultipleWtAssignment()">Add Multiple WT/Description</button>
   </form>
   <div id="skidMessage" class="status"></div>
  </div><br>
@@ -939,7 +940,10 @@ function openRecoveryCodeScreen(){
  $("resetScreen").classList.remove("hidden");
 
  const savedEmail=localStorage.getItem("skidtracker_recovery_email")||"";
- if($("recoveryEmail"))$("recoveryEmail").value=savedEmail;
+ if($("recoveryEmail")){
+  $("recoveryEmail").readOnly=false;
+  $("recoveryEmail").value=savedEmail;
+ }
  if($("recoveryCode"))$("recoveryCode").value="";
  if($("resetPassword"))$("resetPassword").value="";
  if($("resetPasswordConfirm"))$("resetPasswordConfirm").value="";
@@ -947,18 +951,42 @@ function openRecoveryCodeScreen(){
 }
 
 async function forgotPassword(){
- const email=prompt("Enter the email address associated with your account:");
- if(email===null)return;
+ const username=prompt("Enter your SkidTracker username:");
+ if(username===null)return;
 
- const cleanEmail=email.trim().toLowerCase();
- if(!cleanEmail){
-  return alert("Please enter your email address.");
+ const cleanUsername=username.trim();
+ if(!cleanUsername){
+  return alert("Please enter your username.");
  }
+
+ setStatus("loginMessage","Looking up your account...");
+
+ const {data:loginEmail,error:lookupError}=await sb.rpc(
+  "get_login_email",
+  {p_username:cleanUsername}
+ );
+
+ if(lookupError){
+  console.error("Username lookup error:",lookupError);
+  return setStatus(
+   "loginMessage",
+   "Username lookup failed. Check that get_login_email is installed in Supabase.",
+   "error"
+  );
+ }
+
+ if(!loginEmail){
+  return setStatus(
+   "loginMessage",
+   "No account was found for that username.",
+   "error"
+  );
+ }
+
+ const cleanEmail=String(loginEmail).trim().toLowerCase();
 
  setStatus("loginMessage","Sending recovery code...");
 
- // Supabase sends the recovery email. The email template must display {{ .Token }}
- // so the employee can type the recovery code into SkidTracker.
  const {error}=await sb.auth.resetPasswordForEmail(cleanEmail);
 
  if(error){
@@ -976,12 +1004,14 @@ async function forgotPassword(){
  $("appScreen").classList.add("hidden");
  $("resetScreen").classList.remove("hidden");
  $("recoveryEmail").value=cleanEmail;
+ $("recoveryEmail").readOnly=true;
  $("recoveryCode").value="";
  $("resetPassword").value="";
  $("resetPasswordConfirm").value="";
+
  setStatus(
   "resetMessage",
-  "Recovery email sent. Enter the code from the email below.",
+  "Recovery email sent to the email address on your account. Enter the code from that email below.",
   "success"
  );
 }
@@ -1284,6 +1314,102 @@ function assignedWtCodesForSkid(skid){
  }
  return [];
 }
+
+function openMultipleWtAssignment(){
+ if(!admin())return alert("Admin access required.");
+
+ if(!allSkids.length){
+  return alert("Add a skid first.");
+ }
+
+ const skidOptions=[...allSkids]
+  .sort((a,b)=>String(a.skid_number||"").localeCompare(String(b.skid_number||"")))
+  .map(s=>`<option value="${esc(s.id)}">${esc(s.skid_number||"")}</option>`)
+  .join("");
+
+ openModal(`<h2>Add Multiple WT/Description</h2>
+  <p class="muted">Choose a skid, then select as many WT/Descriptions as you want to assign to it.</p>
+  <label>Skid</label>
+  <select id="multiWtSkid" onchange="renderMultipleWtChoices()">
+   <option value="">Select Skid</option>
+   ${skidOptions}
+  </select>
+  <div id="multiWtChoices" style="margin-top:14px"></div>
+  <div id="multiWtMessage" class="status"></div>
+  <br>
+  <button type="button" class="success" onclick="saveMultipleWtAssignments()">Save WT/Descriptions</button>
+  <button type="button" class="secondary" onclick="closeModal()">Cancel</button>`);
+}
+
+function renderMultipleWtChoices(){
+ const skidId=$("multiWtSkid")?.value;
+ const holder=$("multiWtChoices");
+ if(!holder)return;
+
+ if(!skidId){
+  holder.innerHTML='<p class="muted">Select a skid to load WT/Descriptions.</p>';
+  return;
+ }
+
+ const skid=allSkids.find(s=>String(s.id)===String(skidId));
+ const assigned=new Set(assignedWtCodesForSkid(skid));
+
+ const options=wtNumbers.map(v=>{
+  const code=String(v.code||"");
+  const checked=assigned.has(code) ? "checked" : "";
+  return `<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin:7px 0">
+   <input type="checkbox" class="multiWtAssignCheck" value="${esc(code)}" ${checked} style="width:auto;margin-top:3px">
+   <span><b>${esc(code)}</b> — ${esc(v.description||"")}</span>
+  </label>`;
+ }).join("");
+
+ holder.innerHTML=`
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+   <button type="button" class="small secondary" onclick="setAllMultipleWt(true)">Select All</button>
+   <button type="button" class="small secondary" onclick="setAllMultipleWt(false)">Clear All</button>
+  </div>
+  <div style="max-height:420px;overflow:auto;border:1px solid #dbe3ea;border-radius:8px;padding:12px">
+   ${options || '<p class="muted">No WT/Descriptions are loaded.</p>'}
+  </div>`;
+}
+
+function setAllMultipleWt(checked){
+ document.querySelectorAll(".multiWtAssignCheck").forEach(x=>x.checked=checked);
+}
+
+async function saveMultipleWtAssignments(){
+ if(!admin())return alert("Admin access required.");
+
+ const skidId=$("multiWtSkid")?.value;
+ if(!skidId){
+  return setStatus("multiWtMessage","Select a skid first.","error");
+ }
+
+ const codes=[...document.querySelectorAll(".multiWtAssignCheck:checked")]
+  .map(x=>x.value)
+  .filter(Boolean);
+
+ if(!codes.length){
+  return setStatus("multiWtMessage","Select at least one WT/Description.","error");
+ }
+
+ setStatus("multiWtMessage","Saving WT/Descriptions...");
+
+ const {error}=await sb
+  .from("skids")
+  .update({wt_assignments:codes})
+  .eq("id",skidId);
+
+ if(error){
+  console.error(error);
+  return setStatus("multiWtMessage","Could not save WT/Descriptions: "+error.message,"error");
+ }
+
+ closeModal();
+ await refreshAllData();
+ alert(codes.length+" WT/Description assignment(s) saved to the skid.");
+}
+
 
 function assignWtToSkid(id){
  const skid=allSkids.find(s=>String(s.id)===String(id));
