@@ -2502,11 +2502,8 @@ function showAddEmployee(){
 
   <label>Username</label>
   <input id="newEmpUsername" autocomplete="off">
-
-  <label>Email</label>
-  <input id="newEmpEmail" type="email" autocomplete="off">
-
-  <label>Temporary Password</label>
+   <p class="muted">No employee email is required. Employees sign in with their username and password.</p>
+<label>Temporary Password</label>
   <input id="newEmpPassword" type="password" autocomplete="new-password">
 
   <label>Role</label>
@@ -2533,7 +2530,9 @@ async function addEmployee(){
 
  const fullName=$("newEmpName").value.trim();
  const username=$("newEmpUsername").value.trim().toLowerCase();
- const email=$("newEmpEmail").value.trim().toLowerCase();
+ // Supabase Auth still needs an email-shaped identifier internally,
+ // but employees do not need to provide or use an email address.
+ const email=(username+"@skidtracker.local").toLowerCase();
  const password=$("newEmpPassword").value;
  const role=$("newEmpRole").value;
  const btn=$("createEmployeeBtn");
@@ -2546,10 +2545,6 @@ async function addEmployee(){
    "Username must be 3-40 characters using letters, numbers, dots, underscores, or hyphens.",
    "error"
   );
- }
-
- if(!email || !email.includes("@")){
-  return setStatus("addEmployeeMessage","Enter a valid email address.","error");
  }
 
  if(password.length<6){
