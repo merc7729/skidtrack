@@ -1641,16 +1641,18 @@ function assignWtToSkid(id){
 
  const assigned=new Set(assignedWtCodesForSkid(skid));
 
- // Only show WT/Descriptions that belong to this skid's matched SO.
- const matchingWt=wtNumbers.filter(v=>
-  String(v.so||"").trim()===skidSo
- );
+ // Only show unassigned WT/Descriptions that belong to this skid's matched SO.
+ // Once a WT/Description has been assigned to this skid, it is removed from
+ // this assignment display so the admin only sees choices still available.
+ const matchingWt=wtNumbers.filter(v=>{
+  const code=String(v.code||"");
+  return String(v.so||"").trim()===skidSo && !assigned.has(code);
+ });
 
  const options=matchingWt.map(v=>{
   const code=String(v.code||"");
-  const checked=assigned.has(code) ? "checked" : "";
   return `<label class="wtAssignRow" style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin:7px 0">
-   <input type="checkbox" class="wtAssignCheck" value="${esc(code)}" ${checked} style="width:auto;margin-top:3px">
+   <input type="checkbox" class="wtAssignCheck" value="${esc(code)}" style="width:auto;margin-top:3px">
    <span><b>${esc(code)}</b> — ${esc(v.description||"")}</span>
   </label>`;
  }).join("");
@@ -1666,7 +1668,7 @@ function assignWtToSkid(id){
   </div>
 
   <div id="wtAssignList" style="max-height:420px;overflow:auto;border:1px solid #dbe3ea;border-radius:8px;padding:12px">
-   ${options || '<p class="muted">No WT/Descriptions are stored for this SO number.</p>'}
+   ${options || '<p class="muted">All WT/Descriptions for this SO have already been assigned to this skid.</p>'}
   </div>
 
   <br>
@@ -1684,9 +1686,12 @@ function selectVisibleWtAssignments(checked){
 async function saveWtAssignments(id){
  if(!admin())return alert("Admin access required.");
 
- const codes=[...document.querySelectorAll(".wtAssignCheck:checked")]
+ const skid=allSkids.find(s=>String(s.id)===String(id));
+ const existingCodes=assignedWtCodesForSkid(skid);
+ const newCodes=[...document.querySelectorAll(".wtAssignCheck:checked")]
   .map(x=>x.value)
   .filter(Boolean);
+ const codes=[...new Set([...existingCodes,...newCodes])];
 
  const {error}=await sb
   .from("skids")
