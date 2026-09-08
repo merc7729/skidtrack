@@ -1598,7 +1598,17 @@ function getAssignmentSoForSkid(skid){
  const special=getSpecialWtCodesForSelectedSkid(skidNumber);
  if(special?.so)return String(special.so).trim();
 
- // Use the same matching rule already used in Log Work:
+ // If this skid already has assigned WTs, use their SO automatically.
+ const assignedCodes=new Set(assignedWtCodesForSkid(skid));
+ const assignedSos=[...new Set(
+  wtNumbers
+   .filter(v=>assignedCodes.has(String(v.code||"")))
+   .map(v=>String(v.so||"").trim())
+   .filter(Boolean)
+ )];
+ if(assignedSos.length===1)return assignedSos[0];
+
+ // Otherwise use the same automatic matching rule used in Log Work:
  // skid first 4 digits = SO last 4 digits.
  const skidDigits=skidNumber.replace(/\D/g,"");
  const skidFirst4=skidDigits.slice(0,4);
@@ -1647,8 +1657,7 @@ function assignWtToSkid(id){
 
  openModal(`<h2>Assign WT/Description</h2>
   <p><b>Skid:</b> ${esc(skid.skid_number||"")}</p>
-  <p><b>SO Number:</b> ${esc(skidSo)}</p>
-  <p class="muted">Only WT/Descriptions for this skid's SO number are shown.</p>
+  <p class="muted">SkidTracker automatically matched this skid to its SO. Only the correct WT/Descriptions are shown below.</p>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
    <button type="button" class="small secondary" onclick="selectVisibleWtAssignments(true)">Select All</button>
