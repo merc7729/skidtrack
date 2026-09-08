@@ -1097,12 +1097,84 @@ async function openApplication(){
  $("resetScreen").classList.add("hidden");
  $("appScreen").classList.remove("hidden");
  applyRoleVisibility();
+
+ // New employee accounts must replace their temporary password before
+ // they can use SkidTracker.
+ if(currentProfile?.must_reset_password===true){
+  openFirstLoginPasswordReset();
+  return;
+ }
+
  await refreshAllData();
  if(admin()){
   await archiveCompletedWeeklyReports();
   await loadSavedWeeklyReports();
  }
  openSkidFromUrl();
+}
+
+function openFirstLoginPasswordReset(){
+ openModal(`<h2>Set Your Password</h2>
+  <p class="muted">This is your first login. You must replace the temporary password before continuing.</p>
+
+  <label>New Password</label>
+  <input id="firstLoginPassword" type="password" minlength="6" autocomplete="new-password">
+
+  <label>Confirm New Password</label>
+  <input id="firstLoginPasswordConfirm" type="password" minlength="6" autocomplete="new-password">
+
+  <br><br>
+  <button type="button" id="firstLoginPasswordBtn" class="success" onclick="saveFirstLoginPassword()">Set Password & Continue</button>
+  <div id="firstLoginPasswordMessage" class="status"></div>`);
+}
+
+async function saveFirstLoginPassword(){
+ const password=$("firstLoginPassword")?.value||"";
+ const confirmPassword=$("firstLoginPasswordConfirm")?.value||"";
+ const btn=$("firstLoginPasswordBtn");
+
+ if(password.length<6){
+  return setStatus("firstLoginPasswordMessage","Password must be at least 6 characters.","error");
+ }
+ if(password!==confirmPassword){
+  return setStatus("firstLoginPasswordMessage","Passwords do not match.","error");
+ }
+
+ if(btn){
+  btn.disabled=true;
+  btn.textContent="Updating...";
+ }
+ setStatus("firstLoginPasswordMessage","Updating password...");
+
+ const {error:passwordError}=await sb.auth.updateUser({password});
+ if(passwordError){
+  if(btn){
+   btn.disabled=false;
+   btn.textContent="Set Password & Continue";
+  }
+  return setStatus("firstLoginPasswordMessage",passwordError.message,"error");
+ }
+
+ const {error:profileError}=await sb
+  .from("profiles")
+  .update({must_reset_password:false})
+  .eq("id",currentUser.id);
+
+ if(profileError){
+  if(btn){
+   btn.disabled=false;
+   btn.textContent="Set Password & Continue";
+  }
+  return setStatus(
+   "firstLoginPasswordMessage",
+   "Password changed, but the first-login flag could not be cleared: "+profileError.message,
+   "error"
+  );
+ }
+
+ currentProfile.must_reset_password=false;
+ closeModal();
+ await openApplication();
 }
 
 async function refreshAllData(){
@@ -2581,7 +2653,8 @@ async function addEmployee(){
      password,
      full_name:fullName,
      username,
-     role
+     role,
+     must_reset_password:true
     }
    }
   );
@@ -2633,7 +2706,7 @@ async function addEmployee(){
    "Employee created successfully.\n\n"+
    "Username: "+username+
    "\nRole: "+formatRole(role)+
-   "\n\nThey can sign in with their username and temporary password."
+   "\n\nThey must create a new password on their first login."
   );
 
  }catch(err){
