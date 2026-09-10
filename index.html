@@ -860,10 +860,15 @@ function setStatus(id,msg,type=""){const e=$(id);e.textContent=msg;e.className="
 function setTimerStatus(msg,type=""){setStatus("timerMessage",msg,type)}
 
 document.addEventListener("DOMContentLoaded",()=>{
- $("loginForm").onsubmit=login;
- $("resetForm").onsubmit=resetPassword;
- $("workForm").onsubmit=saveWork;
- $("skidForm").onsubmit=addSkid;
+ const loginForm=$("loginForm");
+ const resetForm=$("resetForm");
+ const workForm=$("workForm");
+ const skidForm=$("skidForm");
+
+ if(loginForm)loginForm.onsubmit=login;
+ if(resetForm)resetForm.onsubmit=resetPassword;
+ if(workForm)workForm.onsubmit=saveWork;
+ if(skidForm)skidForm.onsubmit=addSkid;
 
  try{
   populateWorkNumberDropdowns();
@@ -871,7 +876,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   console.error("SO/WT dropdown setup failed:",err);
  }
 
- checkSession();
+ checkSession().catch(err=>{
+  console.error("SkidTracker session startup failed:",err);
+ });
 });
 
 function hideAuthScreens(){
@@ -945,7 +952,7 @@ async function checkSession(){
  authBooting=false;
  showLogin();
  showAuthDiagnostic(
-  "Session was not restored. Build: REFRESH-FIX-V4. Browser auth storage is empty or Supabase rejected the stored session.",
+  "Session was not restored. Build: REFRESH-FIX-V5. Browser auth storage is empty or Supabase rejected the stored session.",
   "error"
  );
 }
@@ -3807,7 +3814,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">REFRESH-FIX-V4</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">REFRESH-FIX-V5</div>
 </body></html>`);
  w.document.close();
 }
