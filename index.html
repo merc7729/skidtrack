@@ -733,13 +733,34 @@ header .skidtracker-brand-logo{
 <script>
 const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
+const skidtrackerAuthStorage={
+ getItem(key){
+  try{
+   const local=window.localStorage.getItem(key);
+   if(local!==null)return local;
+  }catch(err){console.error("Auth localStorage read failed:",err);}
+  try{return window.sessionStorage.getItem(key)}catch(err){console.error("Auth sessionStorage read failed:",err);return null}
+ },
+ setItem(key,value){
+  let wrote=false;
+  try{window.localStorage.setItem(key,value);wrote=true}catch(err){console.error("Auth localStorage write failed:",err);}
+  try{window.sessionStorage.setItem(key,value);wrote=true}catch(err){console.error("Auth sessionStorage write failed:",err);}
+  return wrote;
+ },
+ removeItem(key){
+  try{window.localStorage.removeItem(key)}catch(err){}
+  try{window.sessionStorage.removeItem(key)}catch(err){}
+ }
+};
+
+const SKIDTRACKER_AUTH_KEY="skidtracker-auth-v3";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
  auth:{
   persistSession:true,
   autoRefreshToken:true,
   detectSessionInUrl:true,
-  storage:window.localStorage,
-  storageKey:"skidtracker-auth"
+  storage:skidtrackerAuthStorage,
+  storageKey:SKIDTRACKER_AUTH_KEY
  }
 });
 const APP_URL="https://skidtrack.vercel.app/";
@@ -749,57 +770,6 @@ let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null
 
 const $=x=>document.getElementById(x);
 
-const SKIDTRACKER_SESSION_BACKUP_KEY="skidtracker-session-backup";
-
-function saveSessionBackup(session){
- try{
-  if(session?.access_token && session?.refresh_token){
-   localStorage.setItem(
-    SKIDTRACKER_SESSION_BACKUP_KEY,
-    JSON.stringify({
-     access_token:session.access_token,
-     refresh_token:session.refresh_token
-    })
-   );
-  }
- }catch(err){
-  console.error("Could not save session backup:",err);
- }
-}
-
-function clearSessionBackup(){
- try{localStorage.removeItem(SKIDTRACKER_SESSION_BACKUP_KEY)}catch(err){}
-}
-
-async function restoreSessionBackup(){
- try{
-  const raw=localStorage.getItem(SKIDTRACKER_SESSION_BACKUP_KEY);
-  if(!raw)return null;
-
-  const saved=JSON.parse(raw);
-  if(!saved?.access_token || !saved?.refresh_token)return null;
-
-  const {data,error}=await sb.auth.setSession({
-   access_token:saved.access_token,
-   refresh_token:saved.refresh_token
-  });
-
-  if(error){
-   console.error("Backup session restore failed:",error);
-   clearSessionBackup();
-   return null;
-  }
-
-  if(data?.session){
-   saveSessionBackup(data.session);
-   return data.session;
-  }
- }catch(err){
-  console.error("Backup session restore error:",err);
-  clearSessionBackup();
- }
- return null;
-}
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 let savedWeeklyReports=[];
@@ -861,90 +831,63 @@ function showLogin(){
 }
 
 let authBooting=true;
+let deliberateLogout=false;
 
-async function confirmSignedOut(){
- // Confirm logout only after checking both Supabase storage and SkidTracker's backup.
- await new Promise(resolve=>setTimeout(resolve,500));
-
- let {data,error}=await sb.auth.getSession();
- if(error)console.error("Signed-out verification error:",error);
-
- let session=data?.session||null;
- if(!session){
-  session=await restoreSessionBackup();
+function showAuthDiagnostic(message,type=""){
+ const target=$("loginMessage");
+ if(target && !$("loginScreen").classList.contains("hidden")){
+  setStatus("loginMessage",message,type);
  }
-
- if(session?.user){
-  currentUser=session.user;
-  saveSessionBackup(session);
-  if($("appScreen")?.classList.contains("hidden")){
-   await openApplication();
-  }
-  return false;
- }
-
- currentUser=null;
- currentProfile=null;
- clearSessionBackup();
- showLogin();
- return true;
 }
 
 async function checkSession(){
- sb.auth.onAuthStateChange(async (event,session)=>{
-  if(event==="SIGNED_IN" || event==="TOKEN_REFRESHED" || event==="INITIAL_SESSION"){
+ // Subscribe only for future auth changes. Do not perform database work inside
+ // the auth callback; startup itself is controlled by getSession() below.
+ sb.auth.onAuthStateChange((event,session)=>{
+  console.log("SkidTracker auth event:",event,Boolean(session?.user));
+
+  if(event==="SIGNED_IN" || event==="TOKEN_REFRESHED"){
    if(session?.user){
-    saveSessionBackup(session);
     currentUser=session.user;
-    if(!authBooting && $("appScreen")?.classList.contains("hidden")){
-     await openApplication();
-    }
    }
    return;
   }
 
-  if(event==="SIGNED_OUT"){
-   if(authBooting)return;
-   await confirmSignedOut();
+  if(event==="SIGNED_OUT" && !authBooting && deliberateLogout){
+   currentUser=null;
+   currentProfile=null;
+   showLogin();
   }
  });
 
  let session=null;
- let error=null;
+ let lastError=null;
 
- for(let attempt=0;attempt<3;attempt++){
+ // Give the browser storage adapter a few short reads on a hard refresh.
+ for(let attempt=1;attempt<=4;attempt++){
   const result=await sb.auth.getSession();
+  lastError=result?.error||null;
   session=result?.data?.session||null;
-  error=result?.error||null;
-  if(session)break;
-  await new Promise(resolve=>setTimeout(resolve,250));
+  if(session?.user)break;
+  if(attempt<4)await new Promise(resolve=>setTimeout(resolve,300));
  }
-
- // If Supabase automatic persistence did not restore after refresh,
- // rebuild the session from SkidTracker's backup before showing Login.
- if(!session){
-  session=await restoreSessionBackup();
- }
-
- if(error)console.error("Session restore error:",error);
 
  if(session?.user){
-  saveSessionBackup(session);
   currentUser=session.user;
   await openApplication();
- }else{
-  showLogin();
-
-  const savedRecoveryEmail=localStorage.getItem("skidtracker_recovery_email");
-  if(savedRecoveryEmail && $("recoveryEmail")){
-   $("recoveryEmail").value=savedRecoveryEmail;
-  }
+  authBooting=false;
+  return;
  }
 
+ // Do not silently claim a logout when session restoration failed.
+ console.error("No persisted Supabase session found after refresh.",lastError);
  authBooting=false;
+ showLogin();
+ showAuthDiagnostic(
+  "Session was not restored. Build: REFRESH-FIX-V3. Sign in once, then refresh. If this message returns immediately after refresh, the browser is not retaining the auth storage.",
+  "error"
+ );
 }
-
-
 
 async function login(e){
  e.preventDefault();
@@ -985,7 +928,6 @@ async function login(e){
   return setStatus("loginMessage","Invalid username or password.","error");
  }
 
- if(data?.session)saveSessionBackup(data.session);
  currentUser=data.user;
  await openApplication();
 }
@@ -1109,8 +1051,9 @@ async function resetPassword(e){
  }
 
  localStorage.removeItem("skidtracker_recovery_email");
- clearSessionBackup();
- await sb.auth.signOut();
+ deliberateLogout=true;
+ await sb.auth.signOut({scope:"local"});
+ deliberateLogout=false;
  $("resetForm").reset();
  showLogin();
  setStatus(
@@ -1119,7 +1062,15 @@ async function resetPassword(e){
   "success"
  );
 }
-async function logout(){await stopScanner();clearSessionBackup();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
+async function logout(){
+ deliberateLogout=true;
+ await stopScanner();
+ await sb.auth.signOut({scope:"local"});
+ currentUser=null;
+ currentProfile=null;
+ showLogin();
+ deliberateLogout=false;
+}
 
 async function loadProfile(){
  const {data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
@@ -3795,7 +3746,8 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script></body></html>`);
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">REFRESH-FIX-V3</div>
+</body></html>`);
  w.document.close();
 }
 
