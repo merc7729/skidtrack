@@ -648,7 +648,9 @@ header .skidtracker-brand-logo{
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
    <div style="margin-top:10px;margin-bottom:14px">
-    <button id="viewElectricalBtn" type="button" class="secondary" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical Print</button>
+    <button id="viewElectricalBtn" type="button" class="secondary" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical</button>
+    <button id="viewMechanicalBtn" type="button" class="secondary" onclick="viewSelectedSkidPrintType('mechanical')" disabled>⚙️ View Mechanical</button>
+    <button id="viewPidBtn" type="button" class="secondary" onclick="viewSelectedSkidPrintType('pid')" disabled>🧭 View P&amp;ID</button>
    </div>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
    <button class="success">Save Work Record</button>
@@ -4102,7 +4104,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">MECHANICAL-PID-UPLOAD-V5</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">LOG-WORK-ALL-PRINTS-V6</div>
 </body></html>`);
  w.document.close();
 }
@@ -4244,7 +4246,63 @@ function matchSoAndWtToSkidNumber(skidNumber){
 }
 
 
+
+async function updateLogWorkPrintButtons(){
+ const electricalBtn=$("viewElectricalBtn");
+ const mechanicalBtn=$("viewMechanicalBtn");
+ const pidBtn=$("viewPidBtn");
+ const buttons={electrical:electricalBtn,mechanical:mechanicalBtn,pid:pidBtn};
+
+ Object.values(buttons).forEach(btn=>{if(btn)btn.disabled=true;});
+
+ const skidId=$("selectedSkidId")?.value||$("workSkidSelect")?.value||"";
+ if(!skidId)return;
+
+ const {data,error}=await sb
+  .from("skid_electricals")
+  .select("document_type")
+  .eq("skid_id",skidId);
+
+ if(error){
+  console.error("Skid print availability check failed:",error);
+  return;
+ }
+
+ const types=new Set((data||[]).map(r=>String(r.document_type||"electrical")));
+ for(const [type,btn] of Object.entries(buttons)){
+  if(btn)btn.disabled=!types.has(type);
+ }
+}
+
+async function viewSelectedSkidPrintType(documentType){
+ const type=SKID_PRINT_TYPES[documentType];
+ if(!type)return;
+ const skidId=$("selectedSkidId")?.value||$("workSkidSelect")?.value||"";
+ if(!skidId)return alert("Select or scan a skid first.");
+
+ const skid=allSkids.find(s=>String(s.id)===String(skidId));
+ if(!skid)return alert("Selected skid was not found.");
+
+ const rows=(await loadSkidElectricals(skidId))
+  .filter(r=>String(r.document_type||"electrical")===documentType);
+
+ if(!rows.length)return alert("No "+type.label+" print is assigned to "+skid.skid_number+".");
+
+ openModal(`<h2>${type.icon} ${esc(type.label)} Print</h2>
+  <p><b>Skid:</b> ${esc(skid.skid_number)}</p>
+  <div class="table-wrap"><table>
+   <thead><tr><th>Title</th><th>File</th><th>Action</th></tr></thead>
+   <tbody>${rows.map(r=>`<tr>
+    <td><b>${esc(r.title||r.file_name||type.label+" Print")}</b></td>
+    <td>${esc(r.file_name||"")}</td>
+    <td><button type="button" class="small" onclick="openElectricalFile('${r.id}')">Open / Print</button></td>
+   </tr>`).join("")}</tbody>
+  </table></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
 async function updateLogWorkElectricalButton(){
+ updateLogWorkPrintButtons();
  const btn=$("viewElectricalBtn");
  if(!btn)return;
 
@@ -4258,6 +4316,7 @@ async function updateLogWorkElectricalButton(){
   .from("skid_electricals")
   .select("id")
   .eq("skid_id",skidId)
+  .eq("document_type","electrical")
   .limit(2);
 
  if(error){
@@ -4279,7 +4338,8 @@ async function viewSelectedSkidElectricals(){
  const skid=allSkids.find(s=>String(s.id)===String(skidId));
  if(!skid)return alert("Selected skid was not found.");
 
- const rows=await loadSkidElectricals(skidId);
+ const rows=(await loadSkidElectricals(skidId))
+  .filter(r=>String(r.document_type||"electrical")==="electrical");
  if(!rows.length)return alert("No electrical print is assigned to "+skid.skid_number+".");
 
  openModal(`<h2>⚡ Electrical Print</h2>
