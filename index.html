@@ -733,7 +733,15 @@ header .skidtracker-brand-logo{
 <script>
 const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+ auth:{
+  persistSession:true,
+  autoRefreshToken:true,
+  detectSessionInUrl:true,
+  storage:window.localStorage,
+  storageKey:"skidtracker-auth"
+ }
+});
 const APP_URL="https://skidtrack.vercel.app/";
 
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
@@ -809,8 +817,17 @@ async function checkSession(){
   }
  });
 
- const {data:{session},error}=await sb.auth.getSession();
+ let {data:{session},error}=await sb.auth.getSession();
  if(error)console.error("Session error:",error);
+
+ // On a browser refresh, give Supabase a moment to restore the persisted session
+ // before deciding the employee is logged out.
+ if(!session){
+  await new Promise(resolve=>setTimeout(resolve,250));
+  const retry=await sb.auth.getSession();
+  session=retry?.data?.session||null;
+  if(retry?.error)console.error("Session restore error:",retry.error);
+ }
 
  if(session){
   currentUser=session.user;
