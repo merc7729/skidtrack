@@ -1532,6 +1532,7 @@ function renderInventory(){
     <button type="button" class="small" onclick="openInventoryTransaction('issue','${i.id}')">Issue</button>
     <button type="button" class="small secondary" onclick="openInventoryItemForm('${i.id}')">Edit</button>
      <button type="button" class="small secondary" onclick="showInventoryQr('${i.id}')">QR</button>
+    <button type="button" class="small danger" onclick="deleteInventoryItem('${i.id}')">Delete</button>
    </div></td>
   </tr>`;
  }).join("")||'<tr><td colspan="12" class="empty">No inventory parts match the filters.</td></tr>';
@@ -1678,6 +1679,29 @@ async function saveInventoryItem(id=""){
  const {error}=await query;
  if(error)return setStatus('inventoryFormMessage',error.message,'error');
  closeModal();await refreshInventory();
+}
+
+
+async function deleteInventoryItem(itemId){
+ if(!admin())return;
+ const item=inventoryItems.find(x=>String(x.id)===String(itemId));
+ if(!item)return alert("Inventory item not found.");
+
+ const qty=inventoryQty(itemId);
+ const warning=qty>0
+  ? `\n\nWARNING: This item currently has ${Number(qty).toLocaleString()} ${item.unit||"ea"} in stock. Deleting it will permanently remove the item, its stock balances, and its inventory transaction history.`
+  : `\n\nThis will permanently remove the item and its inventory transaction history.`;
+
+ if(!confirm(`Delete inventory item ${item.part_number} — ${item.name}?${warning}\n\nThis cannot be undone.`))return;
+
+ const typed=prompt(`Type DELETE to permanently delete ${item.part_number}:`);
+ if(typed!=="DELETE")return;
+
+ const {error}=await sb.rpc("delete_inventory_item",{p_item_id:itemId});
+ if(error)return alert("Unable to delete inventory item: "+error.message);
+
+ await refreshInventory();
+ setStatus("inventoryMessage",`✓ ${item.part_number} was deleted from inventory.`,"success");
 }
 
 function openInventoryTransaction(type,itemId=""){
@@ -4760,7 +4784,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">TIME-MATERIALS-V9</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">TIME-MATERIALS-INVENTORY-DELETE-V10</div>
 </body></html>`);
  w.document.close();
 }
