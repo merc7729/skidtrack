@@ -673,6 +673,8 @@ header .skidtracker-brand-logo{
    <button class="success">Add Skid(s)</button>
    <button type="button" class="secondary" onclick="openAddWtDatabase()">+ Add WT/Descriptions to Database</button>
    <button type="button" onclick="openElectricalUpload()">⚡ Upload Electrical</button>
+   <button type="button" onclick="openSkidPrintUpload('mechanical')">⚙️ Upload Mechanical Print</button>
+   <button type="button" onclick="openSkidPrintUpload('pid')">🧭 Upload P&amp;ID</button>
   </form>
   <div id="skidMessage" class="status"></div>
  </div><br>
@@ -1365,7 +1367,7 @@ function cleanSkidDescription(value){
 function renderSkids(){
  const q=$("skidSearch").value.toLowerCase(),st=$("skidStatusFilter").value;
  const rows=allSkids.filter(s=>[s.skid_number].join(" ").toLowerCase().includes(q)&&(!st||s.status===st));
- $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small" onclick="assignWtToSkid('${s.id}')">Assign WT/Description</button><button type="button" class="small" onclick="openElectricalUpload('${s.id}')">Electrical</button><button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
+ $("skidTable").innerHTML=rows.map(s=>`<tr><td><b>${esc(s.skid_number)}</b></td><td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td><td><div class="actions"><button type="button" class="small" onclick="viewSkid('${s.id}')">View</button><button type="button" class="small secondary" onclick="showQr('${s.id}')">QR</button>${admin()?`<button type="button" class="small" onclick="assignWtToSkid('${s.id}')">Assign WT/Description</button><button type="button" class="small" onclick="openElectricalUpload('${s.id}')">Electrical</button><button type="button" class="small" onclick="openSkidPrintUpload('mechanical','${s.id}')">Mechanical</button><button type="button" class="small" onclick="openSkidPrintUpload('pid','${s.id}')">P&amp;ID</button><button type="button" class="small warning" onclick="editSkid('${s.id}')">Edit</button><button type="button" class="small danger" onclick="deleteSkid('${s.id}')">Delete</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="3" class="empty">No skids found.</td></tr>';
 }
 
 async function addSkid(e){
@@ -3782,6 +3784,91 @@ function showQr(id){
 
 
 const ELECTRICAL_BUCKET="skid-electricals";
+const SKID_PRINT_TYPES={
+ electrical:{label:"Electrical",icon:"⚡"},
+ mechanical:{label:"Mechanical",icon:"⚙️"},
+ pid:{label:"P&ID",icon:"🧭"}
+};
+
+
+function openSkidPrintUpload(documentType,preselectedSkidId=""){
+ if(!admin())return alert("Admin or Supervisor access required.");
+ const type=SKID_PRINT_TYPES[documentType];
+ if(!type)return alert("Unknown print type.");
+
+ const options=allSkids
+  .slice()
+  .sort((a,b)=>String(a.skid_number||"").localeCompare(String(b.skid_number||"")))
+  .map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(preselectedSkidId)?"selected":""}>${esc(s.skid_number)}</option>`)
+  .join("");
+
+ openModal(`<h2>${type.icon} Upload ${esc(type.label)} Print</h2>
+  <p class="muted">Upload a ${esc(type.label)} print and assign it to a specific skid.</p>
+  <label>Assign to Skid</label>
+  <select id="skidPrintSkidId"><option value="">Select skid</option>${options}</select>
+
+  <label>Print Title</label>
+  <input id="skidPrintTitle" placeholder="Example: ${esc(type.label)} Drawing">
+
+  <label>${esc(type.label)} File</label>
+  <input id="skidPrintFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.dwg,.dxf,.doc,.docx">
+
+  <div class="actions" style="margin-top:16px">
+   <button type="button" class="success" id="skidPrintUploadBtn" onclick="saveSkidPrintUpload('${documentType}')">Upload & Assign</button>
+   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+  </div>
+  <div id="skidPrintUploadMessage" class="status"></div>`);
+}
+
+async function saveSkidPrintUpload(documentType){
+ const type=SKID_PRINT_TYPES[documentType];
+ if(!type)return;
+ if(!admin())return setStatus("skidPrintUploadMessage","Admin or Supervisor access required.","error");
+
+ const skidId=$("skidPrintSkidId")?.value||"";
+ const title=($("skidPrintTitle")?.value||"").trim();
+ const file=$("skidPrintFile")?.files?.[0];
+ const btn=$("skidPrintUploadBtn");
+
+ if(!skidId)return setStatus("skidPrintUploadMessage","Select a skid.","error");
+ if(!file)return setStatus("skidPrintUploadMessage","Choose a file.","error");
+
+ const skid=allSkids.find(s=>String(s.id)===String(skidId));
+ if(!skid)return setStatus("skidPrintUploadMessage","Selected skid was not found.","error");
+
+ if(btn){btn.disabled=true;btn.textContent="Uploading...";}
+ const storagePath=String(skid.id)+"/"+documentType+"/"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safeElectricalFileName(file.name);
+
+ try{
+  const {error:uploadError}=await sb.storage.from(ELECTRICAL_BUCKET).upload(storagePath,file,{
+   cacheControl:"3600",upsert:false,contentType:file.type||undefined
+  });
+  if(uploadError)throw uploadError;
+
+  const {error:recordError}=await sb.from("skid_electricals").insert({
+   skid_id:skid.id,
+   title:title||file.name,
+   file_name:file.name,
+   storage_path:storagePath,
+   mime_type:file.type||null,
+   uploaded_by:currentUser?.id||null,
+   document_type:documentType
+  });
+
+  if(recordError){
+   await sb.storage.from(ELECTRICAL_BUCKET).remove([storagePath]);
+   throw recordError;
+  }
+
+  setStatus("skidPrintUploadMessage",type.label+" print uploaded and assigned to "+skid.skid_number+".","success");
+  setTimeout(()=>viewSkid(skid.id),500);
+ }catch(err){
+  console.error(type.label+" upload failed:",err);
+  setStatus("skidPrintUploadMessage","Upload failed: "+(err?.message||String(err)),"error");
+ }finally{
+  if(btn){btn.disabled=false;btn.textContent="Upload & Assign";}
+ }
+}
 
 function openElectricalUpload(preselectedSkidId=""){
  if(!admin())return alert("Admin or Supervisor access required.");
@@ -3861,7 +3948,8 @@ async function saveElectricalUpload(){
     file_name:file.name,
     storage_path:storagePath,
     mime_type:file.type||null,
-    uploaded_by:currentUser?.id||null
+    uploaded_by:currentUser?.id||null,
+    document_type:"electrical"
    });
 
   if(recordError){
@@ -3882,7 +3970,7 @@ async function saveElectricalUpload(){
 async function loadSkidElectricals(skidId){
  const {data,error}=await sb
   .from("skid_electricals")
-  .select("id,skid_id,title,file_name,storage_path,mime_type,created_at,uploaded_by")
+  .select("id,skid_id,title,file_name,storage_path,mime_type,created_at,uploaded_by,document_type")
   .eq("skid_id",skidId)
   .order("created_at",{ascending:false});
 
@@ -3953,9 +4041,10 @@ async function renderSkidElectricals(skidId){
  }
 
  holder.innerHTML=`<div class="table-wrap"><table>
-  <thead><tr><th>Title</th><th>File</th><th>Uploaded</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Type</th><th>Title</th><th>File</th><th>Uploaded</th><th>Actions</th></tr></thead>
   <tbody>${rows.map(r=>`<tr>
-   <td><b>${esc(r.title||r.file_name||"Electrical")}</b></td>
+   <td>${esc(SKID_PRINT_TYPES[r.document_type||"electrical"]?.label||"Electrical")}</td>
+   <td><b>${esc(r.title||r.file_name||"Print")}</b></td>
    <td>${esc(r.file_name||"")}</td>
    <td>${fmt(r.created_at)}</td>
    <td><div class="actions">
@@ -3995,8 +4084,8 @@ function viewSkid(id){
 
   
   <div class="top" style="margin-top:18px">
-   <h3 style="margin:0">Electrical Files</h3>
-   ${admin()?`<button type="button" class="small" onclick="openElectricalUpload('${s.id}')">⚡ Upload Electrical</button>`:""}
+   <h3 style="margin:0">Skid Prints</h3>
+   ${admin()?`<div class="actions"><button type="button" class="small" onclick="openElectricalUpload('${s.id}')">⚡ Electrical</button><button type="button" class="small" onclick="openSkidPrintUpload('mechanical','${s.id}')">⚙️ Mechanical</button><button type="button" class="small" onclick="openSkidPrintUpload('pid','${s.id}')">🧭 P&amp;ID</button></div>`:""}
   </div>
   <div id="skidElectricalFiles"><p class="muted">Loading electrical files...</p></div>
 
@@ -4013,7 +4102,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ELECTRICAL-BELOW-NOTES-V4</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">MECHANICAL-PID-UPLOAD-V5</div>
 </body></html>`);
  w.document.close();
 }
