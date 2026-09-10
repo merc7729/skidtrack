@@ -643,7 +643,7 @@ header .skidtracker-brand-logo{
    </div>
    <div class="row">
 <div><label>Select Skid</label><select id="workSkidSelect" onchange="manualSkidSelected()"><option value="">Select Skid</option></select></div>
-<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan QR or select skid"><input id="selectedSkidId" type="hidden"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan QR or select skid"><input id="selectedSkidId" type="hidden"><button id="viewElectricalBtn" type="button" class="secondary" style="margin-top:8px" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical Print</button></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
 <div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
@@ -4009,7 +4009,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ELECTRICAL-UPLOAD-V1</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ELECTRICAL-LOG-WORK-V2</div>
 </body></html>`);
  w.document.close();
 }
@@ -4150,6 +4150,58 @@ function matchSoAndWtToSkidNumber(skidNumber){
  );
 }
 
+
+async function updateLogWorkElectricalButton(){
+ const btn=$("viewElectricalBtn");
+ if(!btn)return;
+
+ const skidId=$("selectedSkidId")?.value||$("workSkidSelect")?.value||"";
+ btn.disabled=true;
+ btn.textContent="⚡ View Electrical Print";
+
+ if(!skidId)return;
+
+ const {data,error}=await sb
+  .from("skid_electricals")
+  .select("id")
+  .eq("skid_id",skidId)
+  .limit(2);
+
+ if(error){
+  console.error("Electrical availability check failed:",error);
+  return;
+ }
+
+ const count=(data||[]).length;
+ if(count){
+  btn.disabled=false;
+  btn.textContent=count>1 ? "⚡ View Electrical Prints" : "⚡ View Electrical Print";
+ }
+}
+
+async function viewSelectedSkidElectricals(){
+ const skidId=$("selectedSkidId")?.value||$("workSkidSelect")?.value||"";
+ if(!skidId)return alert("Select or scan a skid first.");
+
+ const skid=allSkids.find(s=>String(s.id)===String(skidId));
+ if(!skid)return alert("Selected skid was not found.");
+
+ const rows=await loadSkidElectricals(skidId);
+ if(!rows.length)return alert("No electrical print is assigned to "+skid.skid_number+".");
+
+ openModal(`<h2>⚡ Electrical Print</h2>
+  <p><b>Skid:</b> ${esc(skid.skid_number)}</p>
+  <div class="table-wrap"><table>
+   <thead><tr><th>Title</th><th>File</th><th>Action</th></tr></thead>
+   <tbody>${rows.map(r=>`<tr>
+    <td><b>${esc(r.title||r.file_name||"Electrical")}</b></td>
+    <td>${esc(r.file_name||"")}</td>
+    <td><button type="button" class="small" onclick="openElectricalFile('${r.id}')">Open / Print</button></td>
+   </tr>`).join("")}</tbody>
+  </table></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
 function manualSkidSelected(){
  const id=$("workSkidSelect")?.value||"";
  const skid=allSkids.find(s=>String(s.id)===String(id));
@@ -4166,6 +4218,7 @@ function manualSkidSelected(){
    $("workWT").innerHTML='<option value="">Select WT/Description</option>';
    $("workWT").disabled=true;
   }
+  updateLogWorkElectricalButton();
   return;
  }
 
@@ -4175,6 +4228,7 @@ function manualSkidSelected(){
  if(!populateWtForAssignedSkid(skid)){
   matchSoAndWtToSkidNumber(skid.skid_number||"");
  }
+ updateLogWorkElectricalButton();
 }
 
 function handleQr(text){
