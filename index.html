@@ -570,32 +570,8 @@ header .skidtracker-brand-logo{
 
 
 
-<div id="resetScreen" class="hidden">
- <div class="login">
-  <div class="logo">🔐</div>
-  <h1>Reset Password</h1>
-  <p class="muted" style="text-align:center">Enter the recovery code from your email, then choose a new password.</p>
-  <form id="resetForm">
-   <label>Email</label>
-   <input id="recoveryEmail" type="email" required autocomplete="email">
+<div id="resetScreen" class="hidden"></div>
 
-   <label>Recovery Code</label>
-   <input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code"
-          required maxlength="12" placeholder="Enter recovery code">
-
-   <label>New Password</label>
-   <input id="resetPassword" type="password" required minlength="6" autocomplete="new-password">
-
-   <label>Confirm New Password</label>
-   <input id="resetPasswordConfirm" type="password" required minlength="6" autocomplete="new-password">
-
-   <br><br>
-   <button class="success">Verify Code & Update Password</button>
-   <button type="button" class="secondary" onclick="showLogin()">Cancel</button>
-  </form>
-  <div id="resetMessage" class="status"></div>
- </div>
-</div>
 <div id="appScreen" class="hidden">
 <header>
  <div class="brand-wrap">
@@ -951,9 +927,7 @@ function openRecoveryCodeScreen(){
 }
 
 function forgotPassword(){
- alert("Forgot your password?
-
-Please contact your SkidTracker administrator to have a temporary password issued.");
+ alert("Forgot your password?\\n\\nPlease contact your SkidTracker administrator to have a temporary password issued.");
 }
 
 async function resetPassword(e){
