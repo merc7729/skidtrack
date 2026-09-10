@@ -808,26 +808,61 @@ function showLogin(){
  $("loginScreen").classList.remove("hidden");
 }
 
+let authBooting=true;
+
+async function confirmSignedOut(){
+ // Never kick the user to Login from a transient refresh/auth event.
+ // Confirm that Supabase truly has no persisted session first.
+ await new Promise(resolve=>setTimeout(resolve,700));
+ const {data,error}=await sb.auth.getSession();
+ if(error)console.error("Signed-out verification error:",error);
+
+ if(data?.session){
+  currentUser=data.session.user;
+  if($("appScreen")?.classList.contains("hidden")){
+   await openApplication();
+  }
+  return false;
+ }
+
+ currentUser=null;
+ currentProfile=null;
+ showLogin();
+ return true;
+}
+
 async function checkSession(){
  sb.auth.onAuthStateChange(async (event,session)=>{
+  if(event==="SIGNED_IN" || event==="TOKEN_REFRESHED" || event==="INITIAL_SESSION"){
+   if(session?.user){
+    currentUser=session.user;
+    if(!authBooting && $("appScreen")?.classList.contains("hidden")){
+     await openApplication();
+    }
+   }
+   return;
+  }
+
   if(event==="SIGNED_OUT"){
-   currentUser=null;
-   currentProfile=null;
-   showLogin();
+   if(authBooting)return;
+   await confirmSignedOut();
   }
  });
 
- let {data:{session},error}=await sb.auth.getSession();
- if(error)console.error("Session error:",error);
+ let session=null;
+ let error=null;
 
- // On a browser refresh, give Supabase a moment to restore the persisted session
- // before deciding the employee is logged out.
- if(!session){
-  await new Promise(resolve=>setTimeout(resolve,250));
-  const retry=await sb.auth.getSession();
-  session=retry?.data?.session||null;
-  if(retry?.error)console.error("Session restore error:",retry.error);
+ // Supabase normally restores localStorage synchronously, but retry a few times
+ // so a hard refresh cannot falsely look like a logout.
+ for(let attempt=0;attempt<4;attempt++){
+  const result=await sb.auth.getSession();
+  session=result?.data?.session||null;
+  error=result?.error||null;
+  if(session)break;
+  await new Promise(resolve=>setTimeout(resolve,350));
  }
+
+ if(error)console.error("Session restore error:",error);
 
  if(session){
   currentUser=session.user;
@@ -840,6 +875,8 @@ async function checkSession(){
    $("recoveryEmail").value=savedRecoveryEmail;
   }
  }
+
+ authBooting=false;
 }
 
 
