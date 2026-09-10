@@ -562,7 +562,7 @@ header .skidtracker-brand-logo{
    <br><br><button class="success">Sign In</button>
   </form>
   <p style="text-align:center;margin:14px 0 0">
-   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button> <button type="button" class="secondary small" onclick="openRecoveryCodeScreen()">I Have a Recovery Code</button> <button type="button" class="secondary small" onclick="forgotUsername()">Forgot Username?</button>
+   <button type="button" class="secondary small" onclick="forgotPassword()">Forgot Password?</button>
   </p>
   <div id="loginMessage" class="status"></div>
  </div>
@@ -950,70 +950,10 @@ function openRecoveryCodeScreen(){
  setStatus("resetMessage","Enter the recovery code from your email.","");
 }
 
-async function forgotPassword(){
- const username=prompt("Enter your SkidTracker username:");
- if(username===null)return;
+function forgotPassword(){
+ alert("Forgot your password?
 
- const cleanUsername=username.trim();
- if(!cleanUsername){
-  return alert("Please enter your username.");
- }
-
- setStatus("loginMessage","Looking up your account...");
-
- const {data:loginEmail,error:lookupError}=await sb.rpc(
-  "get_login_email",
-  {p_username:cleanUsername}
- );
-
- if(lookupError){
-  console.error("Username lookup error:",lookupError);
-  return setStatus(
-   "loginMessage",
-   "Username lookup failed. Check that get_login_email is installed in Supabase.",
-   "error"
-  );
- }
-
- if(!loginEmail){
-  return setStatus(
-   "loginMessage",
-   "No account was found for that username.",
-   "error"
-  );
- }
-
- const cleanEmail=String(loginEmail).trim().toLowerCase();
-
- setStatus("loginMessage","Sending recovery code...");
-
- const {error}=await sb.auth.resetPasswordForEmail(cleanEmail);
-
- if(error){
-  console.error("Recovery code email error:",error);
-  return setStatus(
-   "loginMessage",
-   "Could not send recovery code: "+error.message,
-   "error"
-  );
- }
-
- localStorage.setItem("skidtracker_recovery_email",cleanEmail);
-
- hideAuthScreens();
- $("appScreen").classList.add("hidden");
- $("resetScreen").classList.remove("hidden");
- $("recoveryEmail").value=cleanEmail;
- $("recoveryEmail").readOnly=true;
- $("recoveryCode").value="";
- $("resetPassword").value="";
- $("resetPasswordConfirm").value="";
-
- setStatus(
-  "resetMessage",
-  "Recovery email sent to the email address on your account. Enter the code from that email below.",
-  "success"
- );
+Please contact your SkidTracker administrator to have a temporary password issued.");
 }
 
 async function resetPassword(e){
@@ -2779,13 +2719,134 @@ function editEmployee(id){
    <option value="false" ${p.must_reset_password!==true?"selected":""}>Not Required</option>
    <option value="true" ${p.must_reset_password===true?"selected":""}>Require Password Change</option>
   </select>
-  <p class="muted">Choose “Require Password Change” to force this employee to set a new password on their next login.</p>
+  <p class="muted">This flag is also turned on automatically whenever an administrator issues a temporary password.</p>
 
-  <br>
+  <hr style="margin:22px 0">
+  <h3>Reset Employee Password</h3>
+  <p class="muted">Set a temporary password. The employee will be required to create a new password after signing in.</p>
+
+  <label>Temporary Password</label>
+  <input id="mEmpTempPassword" type="password" minlength="6" autocomplete="new-password">
+
+  <label>Confirm Temporary Password</label>
+  <input id="mEmpTempPasswordConfirm" type="password" minlength="6" autocomplete="new-password">
+
+  <button type="button" id="resetEmployeePasswordBtn" class="warning" onclick="resetEmployeePassword('${id}')">Reset Password</button>
+  <div id="resetEmployeePasswordMessage" class="status"></div>
+
+  <br><br>
   <button type="button" id="saveEmployeeBtn" class="success" onclick="saveEmployee('${id}')">Save Employee</button>
   <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
   <div id="editEmployeeMessage" class="status"></div>
  `);
+}
+
+async function resetEmployeePassword(id){
+ if(!admin())return alert("Admin access required.");
+
+ const p=allProfiles.find(x=>String(x.id)===String(id));
+ if(!p)return alert("Employee not found.");
+
+ const password=$("mEmpTempPassword")?.value||"";
+ const confirmPassword=$("mEmpTempPasswordConfirm")?.value||"";
+ const btn=$("resetEmployeePasswordBtn");
+
+ if(password.length<6){
+  return setStatus(
+   "resetEmployeePasswordMessage",
+   "Temporary password must be at least 6 characters.",
+   "error"
+  );
+ }
+
+ if(password!==confirmPassword){
+  return setStatus(
+   "resetEmployeePasswordMessage",
+   "Temporary passwords do not match.",
+   "error"
+  );
+ }
+
+ if(String(id)===String(currentUser?.id)){
+  return setStatus(
+   "resetEmployeePasswordMessage",
+   "Use your own account password settings instead of issuing yourself a temporary password.",
+   "error"
+  );
+ }
+
+ if(btn){
+  btn.disabled=true;
+  btn.textContent="Resetting...";
+ }
+
+ setStatus("resetEmployeePasswordMessage","Resetting employee password...");
+
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "admin-reset-password",
+   {
+    body:{
+     user_id:id,
+     password
+    }
+   }
+  );
+
+  if(error){
+   console.error("Admin password reset Edge Function error:",error);
+
+   let message=error.message||"Could not reset employee password.";
+   try{
+    if(error.context){
+     const details=await error.context.json();
+     if(details?.error)message=details.error;
+    }
+   }catch(_){}
+
+   return setStatus("resetEmployeePasswordMessage",message,"error");
+  }
+
+  if(!data?.success){
+   return setStatus(
+    "resetEmployeePasswordMessage",
+    data?.error||"Employee password was not reset.",
+    "error"
+   );
+  }
+
+  // Keep local profile state aligned immediately.
+  if(p)p.must_reset_password=true;
+
+  $("mEmpTempPassword").value="";
+  $("mEmpTempPasswordConfirm").value="";
+
+  setStatus(
+   "resetEmployeePasswordMessage",
+   "Temporary password set successfully. The employee must change it at next login.",
+   "success"
+  );
+
+  await refreshAllData();
+
+  alert(
+   "Temporary password created for "+(p.full_name||p.username||"employee")+".\\n\\n"+
+   "Give the employee the temporary password securely. On their next login, SkidTracker will require a new password."
+  );
+
+ }catch(err){
+  console.error("Admin password reset unexpected error:",err);
+  setStatus(
+   "resetEmployeePasswordMessage",
+   "Unexpected error: "+(err?.message||String(err)),
+   "error"
+  );
+ }finally{
+  if(btn){
+   btn.disabled=false;
+   btn.textContent="Reset Password";
+  }
+ }
 }
 
 async function saveEmployee(id){
