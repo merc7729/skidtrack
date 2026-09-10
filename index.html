@@ -647,15 +647,15 @@ header .skidtracker-brand-logo{
 <div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
 </div>
    <label>Notes</label><textarea id="workNotes"></textarea>
+   <div style="margin-top:10px;margin-bottom:14px">
+    <button id="viewElectricalBtn" type="button" class="secondary" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical Print</button>
+   </div>
    <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
    <button class="success">Save Work Record</button>
   </form>
   <div id="workMessage" class="status"></div>
  </div>
 
- <div style="margin-top:14px">
-  <button id="viewElectricalBtn" type="button" class="secondary" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical Print</button>
- </div>
 </section>
 
 <section id="skids" class="page">
@@ -4013,7 +4013,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ELECTRICAL-BELOW-SERVICE-V3</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ELECTRICAL-BELOW-NOTES-V4</div>
 </body></html>`);
  w.document.close();
 }
