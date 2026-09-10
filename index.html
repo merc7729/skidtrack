@@ -2779,7 +2779,7 @@ async function resetEmployeePassword(id){
     headers:{
      "Content-Type":"application/json",
      "Authorization":"Bearer "+sessionData.session.access_token,
-     "apikey":SUPABASE_KEY
+     "apikey":SUPABASE_PUBLISHABLE_KEY
     },
     body:JSON.stringify({
      user_id:id,
