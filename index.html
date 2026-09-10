@@ -586,6 +586,7 @@ header .skidtracker-brand-logo{
  <button id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</button>
  <button id="nav-work" onclick="showPage('work')">Log Work</button>
  <button id="nav-skids" onclick="showPage('skids')">Skids</button>
+ <button id="nav-inventory" class="admin-only hidden" onclick="showPage('inventory')">Inventory</button>
  <button id="nav-history" onclick="showPage('history')">Work History</button>
  <button id="nav-employees" class="admin-only hidden" onclick="showPage('employees')">Employees</button>
  <button id="nav-reports" class="admin-only hidden" onclick="showPage('reports')">Reports</button>
@@ -693,6 +694,57 @@ header .skidtracker-brand-logo{
 <th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
 <th class="history-admin-col">Notes</th><th class="history-admin-col">Actions</th>
 </tr></thead><tbody id="historyTable"></tbody></table></div></div>
+</section>
+
+
+<section id="inventory" class="page">
+ <div class="top">
+  <div>
+   <h2>Inventory Management</h2>
+   <span class="muted">Track parts, stock levels, locations, skid usage, costs, and reorder needs.</span>
+  </div>
+  <div class="actions">
+   <button type="button" class="success" onclick="openInventoryItemForm()">+ Add Part</button>
+   <button type="button" onclick="openInventoryTransaction('receive')">Receive Stock</button>
+   <button type="button" onclick="openInventoryTransaction('issue')">Issue to Skid</button>
+   <button type="button" class="secondary" onclick="openInventoryTransaction('adjust')">Adjust Stock</button>
+   <button type="button" class="secondary" onclick="openInventoryTransfer()">Transfer</button>
+   <button type="button" class="secondary" onclick="openInventoryLocationForm()">Locations</button>
+   <button type="button" class="secondary" onclick="exportInventoryCSV()">Export CSV</button>
+  </div>
+ </div>
+
+ <div class="grid" style="margin-top:14px">
+  <div class="card"><h3>Inventory Value</h3><div id="inventoryValue" class="stat">$0.00</div></div>
+  <div class="card"><h3>Active Parts</h3><div id="inventoryPartCount" class="stat">0</div></div>
+  <div class="card"><h3>Low Stock</h3><div id="inventoryLowCount" class="stat">0</div></div>
+  <div class="card"><h3>Out of Stock</h3><div id="inventoryOutCount" class="stat">0</div></div>
+ </div>
+
+ <div class="card" style="margin-top:18px">
+  <div class="row">
+   <div><label>Search Parts</label><input id="inventorySearch" placeholder="Part #, description, category, vendor..." oninput="renderInventory()"></div>
+   <div><label>Category</label><select id="inventoryCategoryFilter" onchange="renderInventory()"><option value="">All Categories</option></select></div>
+   <div><label>Stock Status</label><select id="inventoryStockFilter" onchange="renderInventory()"><option value="">All Stock</option><option value="low">Low Stock</option><option value="out">Out of Stock</option><option value="ok">In Stock</option></select></div>
+   <div><label>Location</label><select id="inventoryLocationFilter" onchange="renderInventory()"><option value="">All Locations</option></select></div>
+  </div>
+  <br>
+  <div class="table-wrap"><table>
+   <thead><tr><th>Part #</th><th>Part / Description</th><th>Category</th><th>On Hand</th><th>Min</th><th>Max</th><th>Unit</th><th>Unit Cost</th><th>Value</th><th>Locations</th><th>Status</th><th>Actions</th></tr></thead>
+   <tbody id="inventoryTable"><tr><td colspan="12" class="empty">No inventory parts yet.</td></tr></tbody>
+  </table></div>
+ </div>
+
+ <div class="grid" style="margin-top:18px">
+  <div class="card">
+   <div class="top"><h3>Reorder Queue</h3><button type="button" class="secondary small" onclick="renderInventoryReorder()">Refresh</button></div>
+   <div class="table-wrap"><table><thead><tr><th>Part #</th><th>Part</th><th>On Hand</th><th>Min</th><th>Suggested Order</th></tr></thead><tbody id="inventoryReorderTable"></tbody></table></div>
+  </div>
+  <div class="card">
+   <div class="top"><h3>Recent Inventory Activity</h3><button type="button" class="secondary small" onclick="refreshInventory()">Refresh</button></div>
+   <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Part</th><th>Qty</th><th>Location</th><th>Skid</th><th>By</th></tr></thead><tbody id="inventoryTransactionTable"></tbody></table></div>
+  </div>
+ </div>
 </section>
 
 <section id="employees" class="page">
@@ -831,6 +883,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
 const APP_URL="https://skidtrack.vercel.app/";
 
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
+let inventoryItems=[],inventoryLocations=[],inventoryStock=[],inventoryTransactions=[];
 let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null,totalPausedMs=0;
 
 const $=x=>document.getElementById(x);
@@ -1254,11 +1307,12 @@ async function saveFirstLoginPassword(){
 
 async function refreshAllData(){
  if(admin()){
-  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles(),loadWtDescriptions()]);
+  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles(),loadWtDescriptions(),loadInventoryData()]);
  }else{
   await Promise.all([loadSkids(),loadWorkRecords(),loadWtDescriptions()]);
  }
  renderDashboard();populateFilters();renderSkids();renderHistory();renderEmployees();renderReports();
+ if(admin())renderInventory();
 }
 
 
@@ -1269,7 +1323,7 @@ function applyRoleVisibility(){
  });
 
  // Admin sees the full app.
- const adminNavIds=["dashboard","skids","employees","reports"];
+ const adminNavIds=["dashboard","skids","inventory","employees","reports"];
  adminNavIds.forEach(id=>{
   const nav=$("nav-"+id);
   const page=$(id);
@@ -1305,6 +1359,271 @@ function showPage(id){
  if(b)b.classList.add("active");
 
  if(id!=="work")stopScanner();
+ if(id==="inventory" && admin())refreshInventory();
+}
+
+
+/* ADVANCED INVENTORY MANAGEMENT */
+async function loadInventoryData(){
+ if(!admin())return;
+ const [itemsRes,locationsRes,stockRes,txRes]=await Promise.all([
+  sb.from("inventory_items").select("*").order("part_number"),
+  sb.from("inventory_locations").select("*").order("name"),
+  sb.from("inventory_stock").select("item_id,location_id,quantity"),
+  sb.from("inventory_transactions").select("id,item_id,location_id,transaction_type,quantity,skid_id,reference_number,notes,performed_by,created_at,inventory_items(part_number,name),inventory_locations(name),skids(skid_number),profiles(full_name)").order("created_at",{ascending:false}).limit(100)
+ ]);
+ if(itemsRes.error)console.error("Inventory items:",itemsRes.error);
+ if(locationsRes.error)console.error("Inventory locations:",locationsRes.error);
+ if(stockRes.error)console.error("Inventory stock:",stockRes.error);
+ if(txRes.error)console.error("Inventory transactions:",txRes.error);
+ inventoryItems=itemsRes.data||[];
+ inventoryLocations=locationsRes.data||[];
+ inventoryStock=stockRes.data||[];
+ inventoryTransactions=txRes.data||[];
+ populateInventoryFilters();
+}
+
+async function refreshInventory(){
+ if(!admin())return;
+ await loadInventoryData();
+ renderInventory();
+}
+
+function inventoryQty(itemId,locationId=""){
+ return inventoryStock
+  .filter(s=>String(s.item_id)===String(itemId) && (!locationId || String(s.location_id)===String(locationId)))
+  .reduce((sum,s)=>sum+Number(s.quantity||0),0);
+}
+function inventoryMoney(n){return "$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function inventoryStatus(item,qty){
+ const min=Number(item.min_stock||0);
+ if(qty<=0)return {key:"out",label:"Out of Stock",cls:"error"};
+ if(min>0 && qty<=min)return {key:"low",label:"Low Stock",cls:"warning"};
+ return {key:"ok",label:"In Stock",cls:"success"};
+}
+function inventoryLocationSummary(itemId){
+ const rows=inventoryStock.filter(s=>String(s.item_id)===String(itemId) && Number(s.quantity||0)!==0);
+ if(!rows.length)return "—";
+ return rows.map(s=>{
+  const loc=inventoryLocations.find(l=>String(l.id)===String(s.location_id));
+  return `${esc(loc?.name||"Unknown")}: ${Number(s.quantity||0).toLocaleString()}`;
+ }).join("<br>");
+}
+function populateInventoryFilters(){
+ const cat=$('inventoryCategoryFilter'),loc=$('inventoryLocationFilter');
+ if(cat){
+  const current=cat.value;
+  const cats=[...new Set(inventoryItems.map(i=>String(i.category||"").trim()).filter(Boolean))].sort();
+  cat.innerHTML='<option value="">All Categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  if(cats.includes(current))cat.value=current;
+ }
+ if(loc){
+  const current=loc.value;
+  loc.innerHTML='<option value="">All Locations</option>'+inventoryLocations.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("");
+  if(inventoryLocations.some(l=>String(l.id)===String(current)))loc.value=current;
+ }
+}
+function renderInventory(){
+ if(!admin() || !$('inventoryTable'))return;
+ const q=String($('inventorySearch')?.value||"").trim().toLowerCase();
+ const cat=$('inventoryCategoryFilter')?.value||"";
+ const stockFilter=$('inventoryStockFilter')?.value||"";
+ const locationFilter=$('inventoryLocationFilter')?.value||"";
+
+ const active=inventoryItems.filter(i=>i.active!==false);
+ const totalValue=active.reduce((sum,i)=>sum+inventoryQty(i.id)*Number(i.unit_cost||0),0);
+ const low=active.filter(i=>inventoryStatus(i,inventoryQty(i.id)).key==='low');
+ const out=active.filter(i=>inventoryStatus(i,inventoryQty(i.id)).key==='out');
+ if($('inventoryValue'))$('inventoryValue').textContent=inventoryMoney(totalValue);
+ if($('inventoryPartCount'))$('inventoryPartCount').textContent=active.length;
+ if($('inventoryLowCount'))$('inventoryLowCount').textContent=low.length;
+ if($('inventoryOutCount'))$('inventoryOutCount').textContent=out.length;
+
+ const rows=inventoryItems.filter(i=>{
+  const qty=inventoryQty(i.id,locationFilter);
+  const total=inventoryQty(i.id);
+  const status=inventoryStatus(i,total).key;
+  const hay=[i.part_number,i.name,i.description,i.category,i.manufacturer,i.vendor,i.vendor_part_number].join(" ").toLowerCase();
+  if(q && !hay.includes(q))return false;
+  if(cat && String(i.category||"")!==cat)return false;
+  if(stockFilter && status!==stockFilter)return false;
+  if(locationFilter && qty===0)return false;
+  return true;
+ });
+
+ $('inventoryTable').innerHTML=rows.map(i=>{
+  const total=inventoryQty(i.id), status=inventoryStatus(i,total), value=total*Number(i.unit_cost||0);
+  return `<tr>
+   <td><b>${esc(i.part_number)}</b>${i.vendor_part_number?`<br><span class="muted">Vendor: ${esc(i.vendor_part_number)}</span>`:""}</td>
+   <td><b>${esc(i.name)}</b>${i.description?`<br><span class="muted">${esc(i.description)}</span>`:""}</td>
+   <td>${esc(i.category||"—")}</td>
+   <td><b>${Number(total).toLocaleString()}</b></td>
+   <td>${Number(i.min_stock||0).toLocaleString()}</td>
+   <td>${Number(i.max_stock||0).toLocaleString()}</td>
+   <td>${esc(i.unit||"ea")}</td>
+   <td>${inventoryMoney(i.unit_cost)}</td>
+   <td>${inventoryMoney(value)}</td>
+   <td>${inventoryLocationSummary(i.id)}</td>
+   <td><span class="status ${status.cls}" style="display:inline-block;margin:0">${status.label}</span></td>
+   <td><div class="actions">
+    <button type="button" class="small" onclick="openInventoryItemDetail('${i.id}')">View</button>
+    <button type="button" class="small" onclick="openInventoryTransaction('receive','${i.id}')">Receive</button>
+    <button type="button" class="small" onclick="openInventoryTransaction('issue','${i.id}')">Issue</button>
+    <button type="button" class="small secondary" onclick="openInventoryItemForm('${i.id}')">Edit</button>
+   </div></td>
+  </tr>`;
+ }).join("")||'<tr><td colspan="12" class="empty">No inventory parts match the filters.</td></tr>';
+ renderInventoryReorder();
+ renderInventoryTransactions();
+}
+function renderInventoryReorder(){
+ if(!$('inventoryReorderTable'))return;
+ const rows=inventoryItems.filter(i=>i.active!==false).map(i=>({i,qty:inventoryQty(i.id)})).filter(x=>{
+  const min=Number(x.i.min_stock||0);return x.qty<=0 || (min>0 && x.qty<=min);
+ }).sort((a,b)=>a.qty-b.qty);
+ $('inventoryReorderTable').innerHTML=rows.map(({i,qty})=>{
+  const target=Number(i.max_stock||0)>0?Number(i.max_stock):qty+Number(i.reorder_qty||0);
+  const suggested=Math.max(Number(i.reorder_qty||0),target-qty,0);
+  return `<tr><td><b>${esc(i.part_number)}</b></td><td>${esc(i.name)}</td><td>${Number(qty).toLocaleString()}</td><td>${Number(i.min_stock||0).toLocaleString()}</td><td><b>${Number(suggested).toLocaleString()} ${esc(i.unit||"ea")}</b></td></tr>`;
+ }).join("")||'<tr><td colspan="5" class="empty">No parts currently need reorder.</td></tr>';
+}
+function renderInventoryTransactions(){
+ if(!$('inventoryTransactionTable'))return;
+ $('inventoryTransactionTable').innerHTML=inventoryTransactions.slice(0,25).map(t=>{
+  const type=String(t.transaction_type||"").replaceAll("_"," ");
+  const qty=Number(t.quantity||0);
+  return `<tr><td>${fmt(t.created_at)}</td><td>${esc(type.toUpperCase())}</td><td><b>${esc(t.inventory_items?.part_number||"")}</b><br>${esc(t.inventory_items?.name||"")}</td><td>${qty>0?"+":""}${qty.toLocaleString()}</td><td>${esc(t.inventory_locations?.name||"—")}</td><td>${esc(t.skids?.skid_number||"—")}</td><td>${esc(t.profiles?.full_name||"—")}</td></tr>`;
+ }).join("")||'<tr><td colspan="7" class="empty">No inventory transactions yet.</td></tr>';
+}
+
+function inventoryLocationOptions(selected=""){
+ return '<option value="">Select location</option>'+inventoryLocations.map(l=>`<option value="${esc(l.id)}" ${String(l.id)===String(selected)?"selected":""}>${esc(l.name)}</option>`).join("");
+}
+function inventoryItemOptions(selected=""){
+ return '<option value="">Select part</option>'+inventoryItems.filter(i=>i.active!==false).map(i=>`<option value="${esc(i.id)}" ${String(i.id)===String(selected)?"selected":""}>${esc(i.part_number)} — ${esc(i.name)}</option>`).join("");
+}
+function skidOptions(selected=""){
+ return '<option value="">No skid / General use</option>'+allSkids.map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(selected)?"selected":""}>${esc(s.skid_number)}</option>`).join("");
+}
+
+function openInventoryItemForm(id=""){
+ if(!admin())return;
+ const i=inventoryItems.find(x=>String(x.id)===String(id))||{};
+ openModal(`<h2>${id?"Edit":"Add"} Inventory Part</h2>
+  <div class="row">
+   <div><label>Part Number *</label><input id="invPartNumber" value="${esc(i.part_number||"")}"></div>
+   <div><label>Part Name *</label><input id="invName" value="${esc(i.name||"")}"></div>
+  </div>
+  <label>Description</label><textarea id="invDescription">${esc(i.description||"")}</textarea>
+  <div class="row">
+   <div><label>Category</label><input id="invCategory" value="${esc(i.category||"")}" placeholder="Valves, fittings, electrical..."></div>
+   <div><label>Unit</label><input id="invUnit" value="${esc(i.unit||"ea")}" placeholder="ea, ft, box..."></div>
+  </div>
+  <div class="row">
+   <div><label>Manufacturer</label><input id="invManufacturer" value="${esc(i.manufacturer||"")}"></div>
+   <div><label>Vendor</label><input id="invVendor" value="${esc(i.vendor||"")}"></div>
+   <div><label>Vendor Part #</label><input id="invVendorPart" value="${esc(i.vendor_part_number||"")}"></div>
+  </div>
+  <div class="row">
+   <div><label>Unit Cost</label><input id="invUnitCost" type="number" min="0" step="0.01" value="${Number(i.unit_cost||0)}"></div>
+   <div><label>Minimum Stock</label><input id="invMinStock" type="number" min="0" step="0.01" value="${Number(i.min_stock||0)}"></div>
+   <div><label>Maximum Stock</label><input id="invMaxStock" type="number" min="0" step="0.01" value="${Number(i.max_stock||0)}"></div>
+   <div><label>Reorder Qty</label><input id="invReorderQty" type="number" min="0" step="0.01" value="${Number(i.reorder_qty||0)}"></div>
+  </div>
+  <label><input id="invActive" type="checkbox" ${i.active===false?"":"checked"}> Active Part</label>
+  <br><br><div class="actions"><button type="button" class="success" onclick="saveInventoryItem('${id}')">Save Part</button><button type="button" class="secondary" onclick="closeModal()">Cancel</button></div>
+  <div id="inventoryFormMessage" class="status"></div>`);
+}
+async function saveInventoryItem(id=""){
+ const payload={
+  part_number:($('invPartNumber')?.value||"").trim(),name:($('invName')?.value||"").trim(),description:($('invDescription')?.value||"").trim()||null,
+  category:($('invCategory')?.value||"").trim()||null,unit:($('invUnit')?.value||"ea").trim()||"ea",manufacturer:($('invManufacturer')?.value||"").trim()||null,
+  vendor:($('invVendor')?.value||"").trim()||null,vendor_part_number:($('invVendorPart')?.value||"").trim()||null,unit_cost:Number($('invUnitCost')?.value||0),
+  min_stock:Number($('invMinStock')?.value||0),max_stock:Number($('invMaxStock')?.value||0),reorder_qty:Number($('invReorderQty')?.value||0),active:!!$('invActive')?.checked
+ };
+ if(!payload.part_number || !payload.name)return setStatus('inventoryFormMessage','Part Number and Part Name are required.','error');
+ const query=id?sb.from('inventory_items').update(payload).eq('id',id):sb.from('inventory_items').insert(payload);
+ const {error}=await query;
+ if(error)return setStatus('inventoryFormMessage',error.message,'error');
+ closeModal();await refreshInventory();
+}
+
+function openInventoryTransaction(type,itemId=""){
+ if(!admin())return;
+ const labels={receive:"Receive Stock",issue:"Issue Stock to Skid",adjust:"Adjust Stock"};
+ openModal(`<h2>${labels[type]||"Inventory Transaction"}</h2>
+  <label>Part *</label><select id="invTxItem">${inventoryItemOptions(itemId)}</select>
+  <div class="row"><div><label>Location *</label><select id="invTxLocation">${inventoryLocationOptions()}</select></div><div><label>Quantity *</label><input id="invTxQty" type="number" min="0.01" step="0.01"></div></div>
+  ${type==='issue'?`<label>Assign Usage to Skid</label><select id="invTxSkid">${skidOptions()}</select>`:""}
+  <label>Reference / PO / Ticket</label><input id="invTxReference" placeholder="PO number, requisition, job ticket...">
+  <label>Notes</label><textarea id="invTxNotes"></textarea>
+  <br><div class="actions"><button type="button" class="success" onclick="saveInventoryTransaction('${type}')">Save Transaction</button><button type="button" class="secondary" onclick="closeModal()">Cancel</button></div>
+  <div id="inventoryTxMessage" class="status"></div>`);
+}
+async function saveInventoryTransaction(type){
+ const itemId=$('invTxItem')?.value||"",locationId=$('invTxLocation')?.value||"";
+ const qty=Math.abs(Number($('invTxQty')?.value||0));
+ if(!itemId || !locationId || !(qty>0))return setStatus('inventoryTxMessage','Part, location, and a quantity greater than zero are required.','error');
+ const delta=type==='issue'?-qty:qty;
+ const {data,error}=await sb.rpc('inventory_apply_transaction',{
+  p_item_id:itemId,p_location_id:locationId,p_transaction_type:type,p_quantity:delta,p_skid_id:$('invTxSkid')?.value||null,p_reference_number:($('invTxReference')?.value||"").trim()||null,p_notes:($('invTxNotes')?.value||"").trim()||null
+ });
+ if(error)return setStatus('inventoryTxMessage',error.message,'error');
+ closeModal();await refreshInventory();
+}
+
+function openInventoryTransfer(){
+ if(!admin())return;
+ openModal(`<h2>Transfer Inventory</h2>
+  <label>Part *</label><select id="invTransferItem">${inventoryItemOptions()}</select>
+  <div class="row"><div><label>From Location *</label><select id="invTransferFrom">${inventoryLocationOptions()}</select></div><div><label>To Location *</label><select id="invTransferTo">${inventoryLocationOptions()}</select></div><div><label>Quantity *</label><input id="invTransferQty" type="number" min="0.01" step="0.01"></div></div>
+  <label>Notes</label><textarea id="invTransferNotes"></textarea>
+  <br><div class="actions"><button type="button" class="success" onclick="saveInventoryTransfer()">Transfer Stock</button><button type="button" class="secondary" onclick="closeModal()">Cancel</button></div>
+  <div id="inventoryTransferMessage" class="status"></div>`);
+}
+async function saveInventoryTransfer(){
+ const item=$('invTransferItem')?.value||"",from=$('invTransferFrom')?.value||"",to=$('invTransferTo')?.value||"",qty=Math.abs(Number($('invTransferQty')?.value||0));
+ if(!item||!from||!to||!(qty>0))return setStatus('inventoryTransferMessage','Part, both locations, and quantity are required.','error');
+ if(from===to)return setStatus('inventoryTransferMessage','From and To locations must be different.','error');
+ const {error}=await sb.rpc('inventory_transfer_stock',{p_item_id:item,p_from_location_id:from,p_to_location_id:to,p_quantity:qty,p_notes:($('invTransferNotes')?.value||"").trim()||null});
+ if(error)return setStatus('inventoryTransferMessage',error.message,'error');
+ closeModal();await refreshInventory();
+}
+
+function openInventoryLocationForm(){
+ if(!admin())return;
+ openModal(`<h2>Inventory Locations</h2>
+  <div class="row"><div><label>Location Name</label><input id="invLocationName" placeholder="Main Warehouse, Electrical Cage..."></div><div><label>Description</label><input id="invLocationDescription"></div></div>
+  <button type="button" class="success" onclick="saveInventoryLocation()">+ Add Location</button>
+  <div id="inventoryLocationMessage" class="status"></div><br>
+  <div class="table-wrap"><table><thead><tr><th>Location</th><th>Description</th><th>Total Qty</th></tr></thead><tbody>${inventoryLocations.map(l=>`<tr><td><b>${esc(l.name)}</b></td><td>${esc(l.description||"—")}</td><td>${inventoryStock.filter(s=>String(s.location_id)===String(l.id)).reduce((a,s)=>a+Number(s.quantity||0),0).toLocaleString()}</td></tr>`).join("")||'<tr><td colspan="3" class="empty">No locations yet.</td></tr>'}</tbody></table></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+async function saveInventoryLocation(){
+ const name=($('invLocationName')?.value||"").trim(),description=($('invLocationDescription')?.value||"").trim()||null;
+ if(!name)return setStatus('inventoryLocationMessage','Location name is required.','error');
+ const {error}=await sb.from('inventory_locations').insert({name,description});
+ if(error)return setStatus('inventoryLocationMessage',error.message,'error');
+ await loadInventoryData();openInventoryLocationForm();
+}
+
+async function openInventoryItemDetail(id){
+ const i=inventoryItems.find(x=>String(x.id)===String(id));if(!i)return;
+ const tx=inventoryTransactions.filter(t=>String(t.item_id)===String(id)).slice(0,15);
+ openModal(`<div class="top"><div><h2>${esc(i.part_number)} — ${esc(i.name)}</h2><span class="muted">${esc(i.category||"Uncategorized")}</span></div><button type="button" class="secondary small" onclick="openInventoryItemForm('${i.id}')">Edit</button></div>
+  <p>${esc(i.description||"")}</p>
+  <div class="grid"><div class="card"><h3>On Hand</h3><div class="stat">${inventoryQty(i.id).toLocaleString()}</div></div><div class="card"><h3>Inventory Value</h3><div class="stat">${inventoryMoney(inventoryQty(i.id)*Number(i.unit_cost||0))}</div></div></div>
+  <h3>Stock by Location</h3><div class="table-wrap"><table><thead><tr><th>Location</th><th>Qty</th></tr></thead><tbody>${inventoryLocations.map(l=>({l,q:inventoryQty(i.id,l.id)})).filter(x=>x.q!==0).map(x=>`<tr><td>${esc(x.l.name)}</td><td>${x.q.toLocaleString()} ${esc(i.unit||"ea")}</td></tr>`).join("")||'<tr><td colspan="2" class="empty">No stock on hand.</td></tr>'}</tbody></table></div>
+  <h3 style="margin-top:18px">Recent Activity</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Location</th><th>Skid</th><th>Reference</th></tr></thead><tbody>${tx.map(t=>`<tr><td>${fmt(t.created_at)}</td><td>${esc(t.transaction_type)}</td><td>${Number(t.quantity||0).toLocaleString()}</td><td>${esc(t.inventory_locations?.name||"—")}</td><td>${esc(t.skids?.skid_number||"—")}</td><td>${esc(t.reference_number||"—")}</td></tr>`).join("")||'<tr><td colspan="6" class="empty">No transactions.</td></tr>'}</tbody></table></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
+function exportInventoryCSV(){
+ const header=['Part Number','Part Name','Description','Category','Unit','On Hand','Minimum','Maximum','Reorder Qty','Unit Cost','Inventory Value','Manufacturer','Vendor','Vendor Part Number'];
+ const rows=inventoryItems.map(i=>[i.part_number,i.name,i.description||'',i.category||'',i.unit||'ea',inventoryQty(i.id),i.min_stock||0,i.max_stock||0,i.reorder_qty||0,i.unit_cost||0,inventoryQty(i.id)*Number(i.unit_cost||0),i.manufacturer||'',i.vendor||'',i.vendor_part_number||'']);
+ const csv=[header,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='SkidTracker-Inventory-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 
 async function loadSkids(){
@@ -4104,7 +4423,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">LOG-WORK-ALL-PRINTS-V6</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ADVANCED-INVENTORY-V7</div>
 </body></html>`);
  w.document.close();
 }
