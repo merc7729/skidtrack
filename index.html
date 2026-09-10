@@ -748,6 +748,58 @@ let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
 let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null,totalPausedMs=0;
 
 const $=x=>document.getElementById(x);
+
+const SKIDTRACKER_SESSION_BACKUP_KEY="skidtracker-session-backup";
+
+function saveSessionBackup(session){
+ try{
+  if(session?.access_token && session?.refresh_token){
+   localStorage.setItem(
+    SKIDTRACKER_SESSION_BACKUP_KEY,
+    JSON.stringify({
+     access_token:session.access_token,
+     refresh_token:session.refresh_token
+    })
+   );
+  }
+ }catch(err){
+  console.error("Could not save session backup:",err);
+ }
+}
+
+function clearSessionBackup(){
+ try{localStorage.removeItem(SKIDTRACKER_SESSION_BACKUP_KEY)}catch(err){}
+}
+
+async function restoreSessionBackup(){
+ try{
+  const raw=localStorage.getItem(SKIDTRACKER_SESSION_BACKUP_KEY);
+  if(!raw)return null;
+
+  const saved=JSON.parse(raw);
+  if(!saved?.access_token || !saved?.refresh_token)return null;
+
+  const {data,error}=await sb.auth.setSession({
+   access_token:saved.access_token,
+   refresh_token:saved.refresh_token
+  });
+
+  if(error){
+   console.error("Backup session restore failed:",error);
+   clearSessionBackup();
+   return null;
+  }
+
+  if(data?.session){
+   saveSessionBackup(data.session);
+   return data.session;
+  }
+ }catch(err){
+  console.error("Backup session restore error:",err);
+  clearSessionBackup();
+ }
+ return null;
+}
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 let savedWeeklyReports=[];
@@ -811,14 +863,20 @@ function showLogin(){
 let authBooting=true;
 
 async function confirmSignedOut(){
- // Never kick the user to Login from a transient refresh/auth event.
- // Confirm that Supabase truly has no persisted session first.
- await new Promise(resolve=>setTimeout(resolve,700));
- const {data,error}=await sb.auth.getSession();
+ // Confirm logout only after checking both Supabase storage and SkidTracker's backup.
+ await new Promise(resolve=>setTimeout(resolve,500));
+
+ let {data,error}=await sb.auth.getSession();
  if(error)console.error("Signed-out verification error:",error);
 
- if(data?.session){
-  currentUser=data.session.user;
+ let session=data?.session||null;
+ if(!session){
+  session=await restoreSessionBackup();
+ }
+
+ if(session?.user){
+  currentUser=session.user;
+  saveSessionBackup(session);
   if($("appScreen")?.classList.contains("hidden")){
    await openApplication();
   }
@@ -827,6 +885,7 @@ async function confirmSignedOut(){
 
  currentUser=null;
  currentProfile=null;
+ clearSessionBackup();
  showLogin();
  return true;
 }
@@ -835,6 +894,7 @@ async function checkSession(){
  sb.auth.onAuthStateChange(async (event,session)=>{
   if(event==="SIGNED_IN" || event==="TOKEN_REFRESHED" || event==="INITIAL_SESSION"){
    if(session?.user){
+    saveSessionBackup(session);
     currentUser=session.user;
     if(!authBooting && $("appScreen")?.classList.contains("hidden")){
      await openApplication();
@@ -852,19 +912,24 @@ async function checkSession(){
  let session=null;
  let error=null;
 
- // Supabase normally restores localStorage synchronously, but retry a few times
- // so a hard refresh cannot falsely look like a logout.
- for(let attempt=0;attempt<4;attempt++){
+ for(let attempt=0;attempt<3;attempt++){
   const result=await sb.auth.getSession();
   session=result?.data?.session||null;
   error=result?.error||null;
   if(session)break;
-  await new Promise(resolve=>setTimeout(resolve,350));
+  await new Promise(resolve=>setTimeout(resolve,250));
+ }
+
+ // If Supabase automatic persistence did not restore after refresh,
+ // rebuild the session from SkidTracker's backup before showing Login.
+ if(!session){
+  session=await restoreSessionBackup();
  }
 
  if(error)console.error("Session restore error:",error);
 
- if(session){
+ if(session?.user){
+  saveSessionBackup(session);
   currentUser=session.user;
   await openApplication();
  }else{
@@ -920,6 +985,7 @@ async function login(e){
   return setStatus("loginMessage","Invalid username or password.","error");
  }
 
+ if(data?.session)saveSessionBackup(data.session);
  currentUser=data.user;
  await openApplication();
 }
@@ -1043,6 +1109,7 @@ async function resetPassword(e){
  }
 
  localStorage.removeItem("skidtracker_recovery_email");
+ clearSessionBackup();
  await sb.auth.signOut();
  $("resetForm").reset();
  showLogin();
@@ -1052,7 +1119,7 @@ async function resetPassword(e){
   "success"
  );
 }
-async function logout(){await stopScanner();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
+async function logout(){await stopScanner();clearSessionBackup();await sb.auth.signOut();currentUser=null;currentProfile=null;showLogin()}
 
 async function loadProfile(){
  const {data,error}=await sb.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
