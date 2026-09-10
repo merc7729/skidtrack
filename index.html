@@ -2761,40 +2761,52 @@ async function resetEmployeePassword(id){
  setStatus("resetEmployeePasswordMessage","Resetting employee password...");
 
  try{
-  const {data,error}=await sb.functions.invoke(
-   "admin-reset-password",
-   {
-    body:{
-     user_id:id,
-     password
-    }
-   }
-  );
-
-  if(error){
-   console.error("Admin password reset Edge Function error:",error);
-
-   let message=error.message||"Could not reset employee password.";
-   try{
-    if(error.context){
-     const details=await error.context.json();
-     if(details?.error)message=details.error;
-    }
-   }catch(_){}
-
-   if(/failed to send a request to the edge function/i.test(message)){
-    message="Password reset service is not reachable. Confirm the Supabase Edge Function named admin-reset-password is deployed in this SkidTracker project.";
-   }
-
-   return setStatus("resetEmployeePasswordMessage",message,"error");
-  }
-
-  if(!data?.success){
+  const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+  if(sessionError || !sessionData?.session?.access_token){
    return setStatus(
     "resetEmployeePasswordMessage",
-    data?.error||"Employee password was not reset.",
+    "Your login session is missing or expired. Log out, log back in, and try again.",
     "error"
    );
+  }
+
+  const functionUrl=SUPABASE_URL+"/functions/v1/admin-reset-password";
+  let response;
+
+  try{
+   response=await fetch(functionUrl,{
+    method:"POST",
+    headers:{
+     "Content-Type":"application/json",
+     "Authorization":"Bearer "+sessionData.session.access_token,
+     "apikey":SUPABASE_KEY
+    },
+    body:JSON.stringify({
+     user_id:id,
+     password
+    })
+   });
+  }catch(fetchError){
+   console.error("Admin password reset network error:",fetchError);
+   return setStatus(
+    "resetEmployeePasswordMessage",
+    "Cannot reach the password-reset service. Make sure admin-reset-password is deployed with JWT verification OFF.",
+    "error"
+   );
+  }
+
+  let data={};
+  try{
+   data=await response.json();
+  }catch(_){
+   data={};
+  }
+
+  if(!response.ok || !data?.success){
+   const message=
+    data?.error ||
+    ("Password reset service returned HTTP "+response.status+".");
+   return setStatus("resetEmployeePasswordMessage",message,"error");
   }
 
   // Keep local profile state aligned immediately.
