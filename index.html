@@ -733,32 +733,88 @@ header .skidtracker-brand-logo{
 <script>
 const SUPABASE_URL="https://secrzzjegeuppgziyojk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_ecSkEv24ejpeR4l6jqbVUQ_Zo6kp1IJ";
+const SKIDTRACKER_COOKIE_PREFIX="skidtracker_auth_";
+const SKIDTRACKER_COOKIE_CHUNK=3000;
+
+function cookieGetAll(key){
+ try{
+  const prefix=SKIDTRACKER_COOKIE_PREFIX+encodeURIComponent(key)+"_";
+  const parts={};
+  document.cookie.split(";").forEach(piece=>{
+   const p=piece.trim();
+   const eq=p.indexOf("=");
+   if(eq<0)return;
+   const name=p.slice(0,eq);
+   if(!name.startsWith(prefix))return;
+   const index=Number(name.slice(prefix.length));
+   if(Number.isInteger(index))parts[index]=p.slice(eq+1);
+  });
+  const indexes=Object.keys(parts).map(Number).sort((a,b)=>a-b);
+  if(!indexes.length)return null;
+  return indexes.map(i=>decodeURIComponent(parts[i])).join("");
+ }catch(err){
+  console.error("Auth cookie read failed:",err);
+  return null;
+ }
+}
+
+function cookieRemoveAll(key){
+ try{
+  const prefix=SKIDTRACKER_COOKIE_PREFIX+encodeURIComponent(key)+"_";
+  document.cookie.split(";").forEach(piece=>{
+   const name=piece.trim().split("=")[0];
+   if(name.startsWith(prefix)){
+    document.cookie=name+"=; Max-Age=0; Path=/; SameSite=Lax; Secure";
+   }
+  });
+ }catch(err){}
+}
+
+function cookieSetAll(key,value){
+ try{
+  cookieRemoveAll(key);
+  const encoded=encodeURIComponent(value);
+  let index=0;
+  for(let i=0;i<encoded.length;i+=SKIDTRACKER_COOKIE_CHUNK){
+   const chunk=encoded.slice(i,i+SKIDTRACKER_COOKIE_CHUNK);
+   const name=SKIDTRACKER_COOKIE_PREFIX+encodeURIComponent(key)+"_"+index++;
+   document.cookie=name+"="+chunk+"; Max-Age=2592000; Path=/; SameSite=Lax; Secure";
+  }
+ }catch(err){
+  console.error("Auth cookie write failed:",err);
+ }
+}
+
 const skidtrackerAuthStorage={
  getItem(key){
   try{
-   const local=window.localStorage.getItem(key);
-   if(local!==null)return local;
+   const v=window.localStorage.getItem(key);
+   if(v!==null)return v;
   }catch(err){console.error("Auth localStorage read failed:",err);}
-  try{return window.sessionStorage.getItem(key)}catch(err){console.error("Auth sessionStorage read failed:",err);return null}
+  try{
+   const v=window.sessionStorage.getItem(key);
+   if(v!==null)return v;
+  }catch(err){console.error("Auth sessionStorage read failed:",err);}
+  return cookieGetAll(key);
  },
  setItem(key,value){
-  let wrote=false;
-  try{window.localStorage.setItem(key,value);wrote=true}catch(err){console.error("Auth localStorage write failed:",err);}
-  try{window.sessionStorage.setItem(key,value);wrote=true}catch(err){console.error("Auth sessionStorage write failed:",err);}
-  return wrote;
+  try{window.localStorage.setItem(key,value)}catch(err){console.error("Auth localStorage write failed:",err);}
+  try{window.sessionStorage.setItem(key,value)}catch(err){console.error("Auth sessionStorage write failed:",err);}
+  cookieSetAll(key,value);
  },
  removeItem(key){
   try{window.localStorage.removeItem(key)}catch(err){}
   try{window.sessionStorage.removeItem(key)}catch(err){}
+  cookieRemoveAll(key);
  }
 };
 
-const SKIDTRACKER_AUTH_KEY="skidtracker-auth-v3";
+const SKIDTRACKER_AUTH_KEY="skidtracker-auth-v4";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
  auth:{
   persistSession:true,
   autoRefreshToken:true,
-  detectSessionInUrl:true,
+  detectSessionInUrl:false,
   storage:skidtrackerAuthStorage,
   storageKey:SKIDTRACKER_AUTH_KEY
  }
@@ -841,6 +897,11 @@ function showAuthDiagnostic(message,type=""){
 }
 
 async function checkSession(){
+ console.log("SkidTracker REFRESH-FIX-V4 auth stores:",{
+  local:!!(()=>{try{return localStorage.getItem(SKIDTRACKER_AUTH_KEY)}catch(e){return null}})(),
+  session:!!(()=>{try{return sessionStorage.getItem(SKIDTRACKER_AUTH_KEY)}catch(e){return null}})(),
+  cookie:!!cookieGetAll(SKIDTRACKER_AUTH_KEY)
+ });
  // Subscribe only for future auth changes. Do not perform database work inside
  // the auth callback; startup itself is controlled by getSession() below.
  sb.auth.onAuthStateChange((event,session)=>{
@@ -884,7 +945,7 @@ async function checkSession(){
  authBooting=false;
  showLogin();
  showAuthDiagnostic(
-  "Session was not restored. Build: REFRESH-FIX-V3. Sign in once, then refresh. If this message returns immediately after refresh, the browser is not retaining the auth storage.",
+  "Session was not restored. Build: REFRESH-FIX-V4. Browser auth storage is empty or Supabase rejected the stored session.",
   "error"
  );
 }
@@ -3746,7 +3807,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">REFRESH-FIX-V3</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">REFRESH-FIX-V4</div>
 </body></html>`);
  w.document.close();
 }
