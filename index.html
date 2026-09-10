@@ -584,7 +584,7 @@ header .skidtracker-brand-logo{
 <div class="container">
 <nav>
  <button id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</button>
- <button id="nav-work" onclick="showPage('work')">Log Work</button>
+ <button id="nav-work" onclick="showPage('work')">Time &amp; Materials</button>
  <button id="nav-skids" onclick="showPage('skids')">Skids</button>
  <button id="nav-inventory" class="admin-only hidden" onclick="showPage('inventory')">Inventory</button>
  <button id="nav-history" onclick="showPage('history')">Work History</button>
@@ -612,23 +612,30 @@ header .skidtracker-brand-logo{
 </section>
 
 <section id="work" class="page">
- <h2>Log Work</h2>
- <div class="two">
+ <div class="top">
+  <div>
+   <h2>Time &amp; Materials</h2>
+   <span class="muted">Track labor time and issue inventory materials to the selected skid in one work record.</span>
+  </div>
+ </div>
+
+ <div class="two" style="margin-top:16px">
   <div class="card">
-   <h3>📷 Scan Skid QR Code</h3>
+   <h3>📷 Scan Skid / Inventory QR</h3>
    <div id="reader"></div><br>
-   <button onclick="startScanner()">Start Scanner</button>
-   <button class="secondary" onclick="stopScanner()">Stop Scanner</button>
+   <button type="button" onclick="startScanner()">Start Scanner</button>
+   <button type="button" class="secondary" onclick="stopScanner()">Stop Scanner</button>
+   <p class="muted">Scan a skid QR to select the job. Scan an inventory QR to select that material for issue.</p>
   </div>
 
   <div class="card timer-card">
-   <h3>⏱ Work Timer</h3>
+   <h3>⏱ Labor Timer</h3>
    <div id="timerStatus" class="muted">No active work session.</div>
    <div id="timerDisplay" class="timer">00:00:00</div>
    <div class="row">
-    <button id="startWorkBtn" class="success" onclick="startWork()">▶ Start Work</button>
-    <button id="pauseWorkBtn" class="warning" onclick="togglePauseWork()" disabled>⏸ Pause</button>
-    <button id="stopWorkBtn" class="danger" onclick="stopWork()" disabled>■ Stop Work</button>
+    <button id="startWorkBtn" type="button" class="success" onclick="startWork()">▶ Start Work</button>
+    <button id="pauseWorkBtn" type="button" class="warning" onclick="togglePauseWork()" disabled>⏸ Pause</button>
+    <button id="stopWorkBtn" type="button" class="danger" onclick="stopWork()" disabled>■ Stop Work</button>
    </div>
    <div id="timerMessage" class="status"></div>
   </div>
@@ -636,29 +643,77 @@ header .skidtracker-brand-logo{
 
  <br>
  <div class="card">
-  <h3>🔧 Service Record</h3>
   <form id="workForm">
-   <div class="grid">
-    
-    <div><label>Hours</label><input id="timeSpent" type="number" min=".00" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
+   <div class="top">
+    <div><h3 style="margin:0">🧰 Time &amp; Materials Work Record</h3><span class="muted">Labor and parts are saved together as one auditable T&amp;M record.</span></div>
    </div>
+
+   <h3 style="margin-top:20px">Job / Labor</h3>
    <div class="row">
-<div><label>Select Skid</label><select id="workSkidSelect" onchange="manualSkidSelected()"><option value="">Select Skid</option></select></div>
-<div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan QR or select skid"><input id="selectedSkidId" type="hidden"></div><div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
-<div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
-</div>
-   <label>Notes</label><textarea id="workNotes"></textarea>
+    <div><label>Employee</label><input id="tmEmployee" type="text" readonly></div>
+    <div><label>Labor Classification</label><input id="tmLaborClassification" type="text" readonly></div>
+    <div><label>Labor Type</label>
+     <select id="tmLaborType">
+      <option value="regular">Regular</option>
+      <option value="overtime">Overtime</option>
+      <option value="double_time">Double Time</option>
+      <option value="travel">Travel</option>
+     </select>
+    </div>
+    <div><label>Labor Hours</label><input id="timeSpent" type="number" min="0" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
+   </div>
+
+   <div class="row">
+    <div><label>Select Skid</label><select id="workSkidSelect" onchange="manualSkidSelected()"><option value="">Select Skid</option></select></div>
+    <div><label>Selected Skid</label><input id="selectedSkidDisplay" type="text" readonly placeholder="Scan QR or select skid"><input id="selectedSkidId" type="hidden"></div>
+    <div><label>SO#</label><select id="workSO"><option value="">Select SO#</option></select></div>
+    <div><label>WT/Description</label><select id="workWT" required><option value="">Select WT/Description</option></select></div>
+   </div>
+
+   <label>Work Notes / T&amp;M Description</label>
+   <textarea id="workNotes" placeholder="Describe the work performed, conditions found, repairs, or other T&M notes."></textarea>
+
    <div style="margin-top:10px;margin-bottom:14px">
     <button id="viewElectricalBtn" type="button" class="secondary" onclick="viewSelectedSkidElectricals()" disabled>⚡ View Electrical</button>
     <button id="viewMechanicalBtn" type="button" class="secondary" onclick="viewSelectedSkidPrintType('mechanical')" disabled>⚙️ View Mechanical</button>
     <button id="viewPidBtn" type="button" class="secondary" onclick="viewSelectedSkidPrintType('pid')" disabled>🧭 View P&amp;ID</button>
    </div>
-   <p class="muted">When you press Stop Work, the app automatically calculates hours and minutes and saves the work record if Skid and Work Performed are completed.</p>
-   <button class="success">Save Work Record</button>
+
+   <hr style="border:0;border-top:1px solid #dbe4ec;margin:22px 0">
+
+   <div class="top">
+    <div><h3 style="margin:0">📦 Materials Used</h3><span class="muted">Materials are deducted from inventory only when this T&amp;M record is saved.</span></div>
+    <button type="button" class="secondary small" onclick="clearWorkMaterialCart()">Clear Materials</button>
+   </div>
+
+   <div class="row" style="margin-top:14px">
+    <div style="flex:2"><label>Inventory Part</label><select id="tmMaterialItem" onchange="populateTmMaterialLocations()"><option value="">Select inventory item</option></select></div>
+    <div><label>Stock Location</label><select id="tmMaterialLocation" onchange="updateTmAvailableStock()"><option value="">Select location</option></select></div>
+    <div><label>Quantity</label><input id="tmMaterialQty" type="number" min="0.01" step="0.01" placeholder="0"></div>
+    <div style="align-self:end"><button type="button" class="success" onclick="addWorkMaterial()">+ Add Material</button></div>
+   </div>
+   <div id="tmAvailableStock" class="muted" style="margin-top:6px">Select a part to see available stock.</div>
+   <div id="tmMaterialMessage" class="status"></div>
+
+   <div class="table-wrap" style="margin-top:12px">
+    <table>
+     <thead><tr><th>Part #</th><th>Description</th><th>Location</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Extended</th><th></th></tr></thead>
+     <tbody id="tmMaterialTable"><tr><td colspan="8" class="empty">No materials added.</td></tr></tbody>
+    </table>
+   </div>
+
+   <div class="grid" style="margin-top:16px">
+    <div class="card"><h3>Labor Hours</h3><div id="tmSummaryHours" class="stat">0.00</div></div>
+    <div class="card"><h3>Material Lines</h3><div id="tmSummaryLines" class="stat">0</div></div>
+    <div class="card"><h3>Material Quantity</h3><div id="tmSummaryQty" class="stat">0</div></div>
+    <div class="card"><h3>Material Cost</h3><div id="tmSummaryCost" class="stat">$0.00</div></div>
+   </div>
+
+   <p class="muted" style="margin-top:16px">Saving creates the labor record, deducts every material from inventory, and records the skid usage as one transaction. If any item has insufficient stock, nothing is saved.</p>
+   <button class="success" style="font-size:16px">💾 Save Time &amp; Materials</button>
   </form>
   <div id="workMessage" class="status"></div>
  </div>
-
 </section>
 
 <section id="skids" class="page">
@@ -691,7 +746,7 @@ header .skidtracker-brand-logo{
  <div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div>
  <div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br>
  <div class="table-wrap"><table><thead><tr>
-<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
+<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Materials</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
 <th class="history-admin-col">Notes</th><th class="history-admin-col">Actions</th>
 </tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
@@ -883,7 +938,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
 const APP_URL="https://skidtrack.vercel.app/";
 
 let currentUser,currentProfile,allSkids=[],allWorkRecords=[],allProfiles=[];
-let inventoryItems=[],inventoryLocations=[],inventoryStock=[],inventoryTransactions=[];
+let inventoryItems=[],inventoryLocations=[],inventoryStock=[],inventoryTransactions=[],allWorkMaterials=[],workMaterialCart=[];
 let html5QrCode=null,activeStartTime=null,timerInterval=null,pauseStartedAt=null,totalPausedMs=0;
 
 const $=x=>document.getElementById(x);
@@ -931,6 +986,10 @@ document.addEventListener("DOMContentLoaded",()=>{
  if(resetForm)resetForm.onsubmit=resetPassword;
  if(workForm)workForm.onsubmit=saveWork;
  if(skidForm)skidForm.onsubmit=addSkid;
+ if($("timeSpent")){
+  new MutationObserver(()=>updateTmSummary()).observe($("timeSpent"),{attributes:true,attributeFilter:["value"]});
+  $("timeSpent").addEventListener("change",updateTmSummary);
+ }
 
  try{
   populateWorkNumberDropdowns();
@@ -1307,11 +1366,13 @@ async function saveFirstLoginPassword(){
 
 async function refreshAllData(){
  if(admin()){
-  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles(),loadWtDescriptions(),loadInventoryData()]);
+  await Promise.all([loadSkids(),loadWorkRecords(),loadProfiles(),loadWtDescriptions(),loadInventoryData(),loadWorkMaterials()]);
  }else{
-  await Promise.all([loadSkids(),loadWorkRecords(),loadWtDescriptions()]);
+  await Promise.all([loadSkids(),loadWorkRecords(),loadWtDescriptions(),loadInventoryData(),loadWorkMaterials()]);
  }
  renderDashboard();populateFilters();renderSkids();renderHistory();renderEmployees();renderReports();
+ populateTimeMaterialsUI();
+ renderWorkMaterialCart();
  if(admin())renderInventory();
 }
 
@@ -1365,7 +1426,6 @@ function showPage(id){
 
 /* ADVANCED INVENTORY MANAGEMENT */
 async function loadInventoryData(){
- if(!admin())return;
  const [itemsRes,locationsRes,stockRes,txRes]=await Promise.all([
   sb.from("inventory_items").select("*").order("part_number"),
   sb.from("inventory_locations").select("*").order("name"),
@@ -1381,6 +1441,7 @@ async function loadInventoryData(){
  inventoryStock=stockRes.data||[];
  inventoryTransactions=txRes.data||[];
  populateInventoryFilters();
+ populateTmMaterialItems();
 }
 
 async function refreshInventory(){
@@ -1695,6 +1756,188 @@ function exportInventoryCSV(){
  const csv=[header,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download='SkidTracker-Inventory-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+
+/* TIME & MATERIALS */
+function tmMoney(v){
+ return "$"+Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function profileLaborClass(){
+ const raw=String(currentProfile?.role||"technician").replaceAll("_"," ");
+ return raw.replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function populateTimeMaterialsUI(){
+ if($("tmEmployee"))$("tmEmployee").value=currentProfile?.full_name||currentProfile?.username||currentUser?.email||"";
+ if($("tmLaborClassification"))$("tmLaborClassification").value=profileLaborClass();
+ populateTmMaterialItems();
+ updateTmSummary();
+}
+
+async function loadWorkMaterials(){
+ if(!currentUser){allWorkMaterials=[];return;}
+ let q=sb.from("work_materials")
+  .select("id,work_record_id,item_id,location_id,quantity,unit_cost_snapshot,extended_cost,created_by,created_at,inventory_items(part_number,name,unit),inventory_locations(name)")
+  .order("created_at",{ascending:false});
+ if(!admin())q=q.eq("created_by",currentUser.id);
+ const {data,error}=await q;
+ if(error){console.error("Work materials:",error);allWorkMaterials=[];return;}
+ allWorkMaterials=data||[];
+}
+
+function populateTmMaterialItems(){
+ const sel=$("tmMaterialItem");
+ if(!sel)return;
+ const current=sel.value;
+ const items=inventoryItems
+  .filter(i=>i.active!==false && inventoryQty(i.id)>0)
+  .slice()
+  .sort((a,b)=>String(a.part_number||"").localeCompare(String(b.part_number||"")));
+ sel.innerHTML='<option value="">Select inventory item</option>'+items.map(i=>
+  `<option value="${esc(i.id)}">${esc(i.part_number)} — ${esc(i.name)} (${inventoryQty(i.id).toLocaleString()} ${esc(i.unit||"ea")} available)</option>`
+ ).join("");
+ if(current && items.some(i=>String(i.id)===String(current)))sel.value=current;
+ if(sel.value)populateTmMaterialLocations();
+}
+
+function populateTmMaterialLocations(){
+ const itemId=$("tmMaterialItem")?.value||"";
+ const loc=$("tmMaterialLocation");
+ if(!loc)return;
+ if(!itemId){
+  loc.innerHTML='<option value="">Select location</option>';
+  updateTmAvailableStock();
+  return;
+ }
+ const rows=inventoryLocations
+  .filter(l=>l.active!==false)
+  .map(l=>({l,qty:inventoryQty(itemId,l.id)}))
+  .filter(x=>x.qty>0);
+ loc.innerHTML='<option value="">Select location</option>'+rows.map(x=>
+  `<option value="${esc(x.l.id)}">${esc(x.l.name)} — ${x.qty.toLocaleString()} available</option>`
+ ).join("");
+ if(rows.length===1)loc.value=rows[0].l.id;
+ updateTmAvailableStock();
+}
+
+function updateTmAvailableStock(){
+ const itemId=$("tmMaterialItem")?.value||"";
+ const locationId=$("tmMaterialLocation")?.value||"";
+ const el=$("tmAvailableStock");
+ if(!el)return;
+ if(!itemId){el.textContent="Select a part to see available stock.";return;}
+ const item=inventoryItems.find(i=>String(i.id)===String(itemId));
+ const qty=locationId?inventoryQty(itemId,locationId):inventoryQty(itemId);
+ el.textContent=`Available: ${Number(qty).toLocaleString()} ${item?.unit||"ea"}${locationId?" at selected location":" total"}.`;
+}
+
+function addWorkMaterial(){
+ const itemId=$("tmMaterialItem")?.value||"";
+ const locationId=$("tmMaterialLocation")?.value||"";
+ const qty=Math.abs(Number($("tmMaterialQty")?.value||0));
+ const item=inventoryItems.find(i=>String(i.id)===String(itemId));
+ const location=inventoryLocations.find(l=>String(l.id)===String(locationId));
+ if(!itemId||!locationId||!(qty>0))return setStatus("tmMaterialMessage","Select a part, stock location, and quantity greater than zero.","error");
+ if(!item||!location)return setStatus("tmMaterialMessage","Inventory item or location could not be found.","error");
+
+ const available=inventoryQty(itemId,locationId);
+ const already=workMaterialCart.filter(x=>x.item_id===itemId&&x.location_id===locationId).reduce((a,x)=>a+Number(x.quantity||0),0);
+ if(already+qty>available)return setStatus("tmMaterialMessage",`Insufficient stock. ${available.toLocaleString()} ${item.unit||"ea"} available at ${location.name}.`,"error");
+
+ const existing=workMaterialCart.find(x=>x.item_id===itemId&&x.location_id===locationId);
+ if(existing)existing.quantity=Number(existing.quantity)+qty;
+ else workMaterialCart.push({
+  item_id:itemId,location_id:locationId,quantity:qty,
+  part_number:item.part_number,name:item.name,unit:item.unit||"ea",
+  location_name:location.name,unit_cost:Number(item.unit_cost||0)
+ });
+
+ if($("tmMaterialQty"))$("tmMaterialQty").value="";
+ setStatus("tmMaterialMessage","✓ Material added to this T&M record.","success");
+ renderWorkMaterialCart();
+}
+
+function removeWorkMaterial(index){
+ workMaterialCart.splice(index,1);
+ renderWorkMaterialCart();
+ setStatus("tmMaterialMessage","");
+}
+
+function clearWorkMaterialCart(){
+ if(!workMaterialCart.length)return;
+ if(confirm("Remove all materials from this T&M record?")){
+  workMaterialCart=[];
+  renderWorkMaterialCart();
+ }
+}
+
+function renderWorkMaterialCart(){
+ const body=$("tmMaterialTable");
+ if(body){
+  body.innerHTML=workMaterialCart.map((m,index)=>`<tr>
+   <td><b>${esc(m.part_number)}</b></td>
+   <td>${esc(m.name)}</td>
+   <td>${esc(m.location_name)}</td>
+   <td>${Number(m.quantity).toLocaleString()}</td>
+   <td>${esc(m.unit)}</td>
+   <td>${tmMoney(m.unit_cost)}</td>
+   <td><b>${tmMoney(Number(m.quantity)*Number(m.unit_cost))}</b></td>
+   <td><button type="button" class="small danger" onclick="removeWorkMaterial(${index})">Remove</button></td>
+  </tr>`).join("")||'<tr><td colspan="8" class="empty">No materials added.</td></tr>';
+ }
+ updateTmSummary();
+}
+
+function updateTmSummary(){
+ const hours=Number($("timeSpent")?.value||0);
+ const qty=workMaterialCart.reduce((a,m)=>a+Number(m.quantity||0),0);
+ const cost=workMaterialCart.reduce((a,m)=>a+(Number(m.quantity||0)*Number(m.unit_cost||0)),0);
+ if($("tmSummaryHours"))$("tmSummaryHours").textContent=hours.toFixed(2);
+ if($("tmSummaryLines"))$("tmSummaryLines").textContent=String(workMaterialCart.length);
+ if($("tmSummaryQty"))$("tmSummaryQty").textContent=qty.toLocaleString();
+ if($("tmSummaryCost"))$("tmSummaryCost").textContent=tmMoney(cost);
+}
+
+function workMaterialsForRecord(workRecordId){
+ return allWorkMaterials.filter(m=>String(m.work_record_id)===String(workRecordId));
+}
+
+function workMaterialSummary(workRecordId){
+ const rows=workMaterialsForRecord(workRecordId);
+ return {
+  rows,
+  qty:rows.reduce((a,m)=>a+Number(m.quantity||0),0),
+  cost:rows.reduce((a,m)=>a+Number(m.extended_cost||Number(m.quantity||0)*Number(m.unit_cost_snapshot||0)),0)
+ };
+}
+
+function viewWorkMaterials(workRecordId){
+ const rec=allWorkRecords.find(r=>String(r.id)===String(workRecordId));
+ const sum=workMaterialSummary(workRecordId);
+ if(!sum.rows.length)return alert("No inventory materials were issued with this record.");
+ openModal(`<h2>📦 T&M Materials</h2>
+  <p><b>Skid:</b> ${esc(rec?.skids?.skid_number||"—")} &nbsp; <b>Labor Hours:</b> ${Number(rec?.time_spent||0).toFixed(2)}</p>
+  <div class="table-wrap"><table><thead><tr><th>Part #</th><th>Description</th><th>Location</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Extended</th></tr></thead>
+  <tbody>${sum.rows.map(m=>`<tr><td><b>${esc(m.inventory_items?.part_number||"")}</b></td><td>${esc(m.inventory_items?.name||"")}</td><td>${esc(m.inventory_locations?.name||"—")}</td><td>${Number(m.quantity||0).toLocaleString()}</td><td>${esc(m.inventory_items?.unit||"ea")}</td><td>${tmMoney(m.unit_cost_snapshot)}</td><td><b>${tmMoney(m.extended_cost)}</b></td></tr>`).join("")}</tbody></table></div>
+  <div class="grid" style="margin-top:16px"><div class="card"><h3>Total Material Qty</h3><div class="stat">${sum.qty.toLocaleString()}</div></div><div class="card"><h3>Material Cost</h3><div class="stat">${tmMoney(sum.cost)}</div></div></div>
+  <br><button type="button" class="secondary" onclick="closeModal()">Close</button>`);
+}
+
+function handleInventoryQrValue(text){
+ const raw=String(text||"").trim();
+ if(!raw.toUpperCase().startsWith("SKIDTRACKER-INVENTORY:"))return false;
+ const itemId=raw.slice(raw.indexOf(":")+1).trim();
+ const item=inventoryItems.find(i=>String(i.id)===String(itemId));
+ if(!item){alert("This inventory QR item was not found or inventory has not loaded.");return true;}
+ if($("tmMaterialItem")){
+  $("tmMaterialItem").value=String(item.id);
+  populateTmMaterialLocations();
+  setStatus("tmMaterialMessage",`✓ Inventory QR selected: ${item.part_number} — ${item.name}`,"success");
+ }
+ stopScanner();
+ return true;
 }
 
 async function loadSkids(){
@@ -2824,33 +3067,52 @@ function syncSoWtToSelectedSkid(){
 async function saveWork(e){
  e.preventDefault();
 
- if(!$("selectedSkidId") || !$("selectedSkidId").value){
-  return setStatus("workMessage","Choose a skid number before saving the work record.","error");
+ const skidId=$("selectedSkidId")?.value||"";
+ const wt=$("workWT")?.value||"";
+ const hours=Number($("timeSpent")?.value||0);
+
+ if(!skidId)return setStatus("workMessage","Choose a skid before saving the T&M record.","error");
+ if(!wt)return setStatus("workMessage","Choose a WT/Description before saving the T&M record.","error");
+ if(!(hours>0))return setStatus("workMessage","Start and stop the labor timer so the record has labor time.","error");
+
+ // Revalidate cart against the latest locally loaded stock before calling the atomic server transaction.
+ for(const m of workMaterialCart){
+  const available=inventoryQty(m.item_id,m.location_id);
+  if(Number(m.quantity)>available){
+   return setStatus("workMessage",`Insufficient inventory for ${m.part_number}. Available: ${available}. Refresh inventory and adjust materials.`,"error");
+  }
  }
 
- if(!$("workWT") || !$("workWT").value){
-  return setStatus("workMessage","Choose a WT/Description before saving the work record.","error");
- }
+ setStatus("workMessage","Saving labor and issuing materials...");
 
- setStatus("workMessage","Saving...");
+ const materials=workMaterialCart.map(m=>({
+  item_id:m.item_id,
+  location_id:m.location_id,
+  quantity:Number(m.quantity)
+ }));
 
- const payload={
-  skid_id:$("selectedSkidId")?.value||null,
-  technician_id:currentUser.id,
-  technician_name:currentProfile?.full_name||currentProfile?.username||currentUser.email,
-  work_performed:$("workWT")?.value||"Work logged",
-  time_spent:Number($("timeSpent").value),
-  notes:$("workNotes").value.trim(),so_number:$("workSO")?.value||null,wt_number:$("workWT")?.value||null,
-  start_time:window.pendingStartTime||null,
-  stop_time:window.pendingStopTime||null
- };
- const {error}=await sb.from("work_records").insert(payload);
+ const {data,error}=await sb.rpc("save_time_materials_work",{
+  p_skid_id:skidId,
+  p_work_performed:wt||"Work logged",
+  p_time_spent:hours,
+  p_notes:($("workNotes")?.value||"").trim()||null,
+  p_so_number:$("workSO")?.value||null,
+  p_wt_number:wt||null,
+  p_start_time:window.pendingStartTime||null,
+  p_stop_time:window.pendingStopTime||null,
+  p_labor_type:$("tmLaborType")?.value||"regular",
+  p_labor_classification:$("tmLaborClassification")?.value||profileLaborClass(),
+  p_materials:materials
+ });
+
  if(error)return setStatus("workMessage",error.message,"error");
+
  e.target.reset();
+ workMaterialCart=[];
  window.pendingStartTime=null;
  window.pendingStopTime=null;
  clearTimer();
- $("timeSpent").value="0.00";
+ if($("timeSpent"))$("timeSpent").value="0.00";
  if($("selectedSkidDisplay"))$("selectedSkidDisplay").value=cleanSelectedSkid("");
  if($("selectedSkidId"))$("selectedSkidId").value="";
  if($("workSkidSelect"))$("workSkidSelect").value="";
@@ -2863,7 +3125,9 @@ async function saveWork(e){
   $("workWT").innerHTML='<option value="">Select WT/Description</option>';
   $("workWT").disabled=true;
  }
- setStatus("workMessage","✓ Work record saved.","success");refreshAllData();
+ renderWorkMaterialCart();
+ setStatus("workMessage","✓ Time & Materials record saved. Inventory was updated.","success");
+ await refreshAllData();
 }
 
 function renderHistory(){
@@ -2895,7 +3159,8 @@ function renderHistory(){
    <td>${fmt(r.performed_at)}</td>
    <td>${esc(r.skids?.skid_number)}</td>
    <td>${wtDesc}</td>
-   <td>${Number(r.time_spent||0).toFixed(2)}</td>`;
+   <td>${Number(r.time_spent||0).toFixed(2)}</td>
+   <td>${(()=>{const m=workMaterialSummary(r.id);return m.rows.length?`<button type="button" class="small secondary" onclick="viewWorkMaterials('${r.id}')">${m.rows.length} line${m.rows.length===1?"":"s"} · ${tmMoney(m.cost)}</button>`:"—";})()}</td>`;
 
   if(admin()){
    return `<tr>${baseCells}
@@ -2907,7 +3172,7 @@ function renderHistory(){
   }
 
   return `<tr>${baseCells}</tr>`;
- }).join("") || `<tr><td colspan="${admin()?9:5}" class="empty">No records found.</td></tr>`;
+ }).join("") || `<tr><td colspan="${admin()?10:6}" class="empty">No records found.</td></tr>`;
 }
 
 function toDateTimeLocalValue(value){
@@ -2978,9 +3243,10 @@ async function saveWorkEdit(id){
 }
 
 async function deleteWork(id){
- if(confirm("Delete this work record?")){
-  const {error}=await sb.from("work_records").delete().eq("id",id);
-  if(error)alert(error.message);else refreshAllData();
+ if(!admin())return;
+ if(confirm("Delete this T&M work record? Any materials issued with it will be returned to inventory and a reversal will be recorded.")){
+  const {error}=await sb.rpc("delete_time_materials_work",{p_work_record_id:id});
+  if(error)alert(error.message);else await refreshAllData();
  }
 }
 
@@ -4494,7 +4760,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">INVENTORY-QR-V8</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">TIME-MATERIALS-V9</div>
 </body></html>`);
  w.document.close();
 }
@@ -4775,6 +5041,7 @@ function manualSkidSelected(){
 }
 
 function handleQr(text){
+ if(handleInventoryQrValue(text))return;
  let qrSkidNumber="";
 
  try{
