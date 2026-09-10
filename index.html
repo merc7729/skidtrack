@@ -1470,6 +1470,7 @@ function renderInventory(){
     <button type="button" class="small" onclick="openInventoryTransaction('receive','${i.id}')">Receive</button>
     <button type="button" class="small" onclick="openInventoryTransaction('issue','${i.id}')">Issue</button>
     <button type="button" class="small secondary" onclick="openInventoryItemForm('${i.id}')">Edit</button>
+     <button type="button" class="small secondary" onclick="showInventoryQr('${i.id}')">QR</button>
    </div></td>
   </tr>`;
  }).join("")||'<tr><td colspan="12" class="empty">No inventory parts match the filters.</td></tr>';
@@ -1494,6 +1495,76 @@ function renderInventoryTransactions(){
   const qty=Number(t.quantity||0);
   return `<tr><td>${fmt(t.created_at)}</td><td>${esc(type.toUpperCase())}</td><td><b>${esc(t.inventory_items?.part_number||"")}</b><br>${esc(t.inventory_items?.name||"")}</td><td>${qty>0?"+":""}${qty.toLocaleString()}</td><td>${esc(t.inventory_locations?.name||"—")}</td><td>${esc(t.skids?.skid_number||"—")}</td><td>${esc(t.profiles?.full_name||"—")}</td></tr>`;
  }).join("")||'<tr><td colspan="7" class="empty">No inventory transactions yet.</td></tr>';
+}
+
+
+function inventoryQrValue(item){
+ return "SKIDTRACKER-INVENTORY:"+String(item.id);
+}
+
+function showInventoryQr(itemId){
+ const item=inventoryItems.find(x=>String(x.id)===String(itemId));
+ if(!item)return alert("Inventory item not found.");
+
+ openModal(`<h2>Inventory QR Code</h2>
+  <div style="text-align:center">
+   <div style="font-size:18px;font-weight:800">${esc(item.part_number)}</div>
+   <div class="muted">${esc(item.name||"")}</div>
+   <div id="inventoryQrCanvas"></div>
+   <p class="muted" style="font-size:12px">Small inventory label</p>
+   <div class="actions" style="justify-content:center">
+    <button type="button" onclick="printInventoryQr('${item.id}')">Print Small QR</button>
+    <button type="button" class="secondary" onclick="closeModal()">Close</button>
+   </div>
+  </div>`);
+
+ drawInventoryQr("inventoryQrCanvas",inventoryQrValue(item),150);
+}
+
+function drawInventoryQr(containerId,text,size=150){
+ const c=$(containerId);
+ if(!c)return;
+ if(typeof QRCode==="undefined")return alert("QR library failed to load. Refresh the page and try again.");
+ const px=Math.max(100,Math.min(Number(size)||150,180));
+ c.innerHTML="";
+ c.style.cssText=`width:${px}px;height:${px}px;margin:12px auto;display:block;overflow:hidden;`;
+ new QRCode(c,{
+  text,
+  width:px,
+  height:px,
+  colorDark:"#000000",
+  colorLight:"#ffffff",
+  correctLevel:QRCode.CorrectLevel.M
+ });
+}
+
+function printInventoryQr(itemId){
+ const item=inventoryItems.find(x=>String(x.id)===String(itemId));
+ if(!item)return alert("Inventory item not found.");
+
+ const w=window.open("","_blank");
+ if(!w)return alert("Allow popups to print.");
+
+ const qrText=JSON.stringify(inventoryQrValue(item));
+ const part=esc(item.part_number||"");
+ const name=esc(item.name||"");
+
+ w.document.write(`<!doctype html><html><head><title>${part} QR</title>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+ <style>
+ @page{size:2in 1.25in;margin:.08in}
+ html,body{margin:0;padding:0;width:2in;height:1.25in}
+ body{font-family:Arial,sans-serif;text-align:center;overflow:hidden}
+ .label{width:1.84in;height:1.09in;box-sizing:border-box;display:flex;align-items:center;gap:.08in;padding:.04in}
+ #q{width:.78in;height:.78in;flex:0 0 .78in}
+ .txt{text-align:left;min-width:0}
+ .part{font-size:11pt;font-weight:800;line-height:1.05;word-break:break-word}
+ .name{font-size:7pt;line-height:1.05;margin-top:4px;max-height:.35in;overflow:hidden}
+ </style></head><body>
+ <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
+ <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
+ </body></html>`);
+ w.document.close();
 }
 
 function inventoryLocationOptions(selected=""){
@@ -4423,7 +4494,7 @@ function viewSkid(id){
 function printQrLabel(id){
  const s=allSkids.find(x=>x.id===id),w=window.open("","_blank");if(!w)return alert("Allow popups to print.");
  const qrText=JSON.stringify(skidUrl(s));
- w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">ADVANCED-INVENTORY-V7</div>
+ w.document.write(`<!doctype html><html><head><title>${esc(s.skid_number)}</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial;text-align:center;padding:24px}#q{display:flex;justify-content:center;margin:20px}</style></head><body><h2>💧 SkidTracker</h2><h1>${esc(s.skid_number)}</h1><div id="q"></div><script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:300,height:300,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},700)}<\/script><div id="skidtrackerBuildMarker" style="position:fixed;right:8px;bottom:6px;font-size:10px;opacity:.45;z-index:9999">INVENTORY-QR-V8</div>
 </body></html>`);
  w.document.close();
 }
