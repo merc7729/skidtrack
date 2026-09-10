@@ -2782,6 +2782,10 @@ async function resetEmployeePassword(id){
     }
    }catch(_){}
 
+   if(/failed to send a request to the edge function/i.test(message)){
+    message="Password reset service is not reachable. Confirm the Supabase Edge Function named admin-reset-password is deployed in this SkidTracker project.";
+   }
+
    return setStatus("resetEmployeePasswordMessage",message,"error");
   }
 
