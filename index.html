@@ -700,6 +700,11 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 <style id="tm-hours-no-minutes">
 .tm-labor-hours-box .tm-minutes{display:none!important}
 </style>
+<style id="tm-hours-final-cleanup">
+.tm-labor-hours-box #minutesDisplay,
+.tm-labor-hours-box .tm-minutes{display:none!important}
+.tm-labor-hours-box{padding-bottom:13px!important}
+</style>
 </head>
 <body>
 
@@ -1823,7 +1828,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-ONLY-V6</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-NO-MINUTES-V7</div>
 </body></html>`);
  w.document.close();
 }
