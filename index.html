@@ -705,6 +705,40 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 .tm-labor-hours-box .tm-minutes{display:none!important}
 .tm-labor-hours-box{padding-bottom:13px!important}
 </style>
+<style id="tm-hours-match-other-fields">
+.tm-labor-hours-field{
+ background:transparent!important;
+ border:0!important;
+ padding:0!important;
+ box-shadow:none!important;
+}
+.tm-labor-hours-field>label{
+ display:block!important;
+ margin:0 0 6px!important;
+ color:inherit!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+}
+.tm-labor-hours-field #timeSpent{
+ width:100%!important;
+ height:auto!important;
+ min-height:0!important;
+ margin:0!important;
+ padding:10px 12px!important;
+ background:#fff!important;
+ color:#102f5c!important;
+ border:1px solid #cbdff2!important;
+ border-radius:9px!important;
+ box-shadow:none!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+ text-align:left!important;
+}
+.tm-labor-hours-field #timeSpent:focus{
+ border-color:#158cf5!important;
+ box-shadow:0 0 0 3px rgba(21,140,245,.12)!important;
+}
+</style>
 </head>
 <body>
 
@@ -855,14 +889,9 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
       <option value="travel">Travel</option>
      </select>
     </div>
-    <div class="tm-labor-hours-box">
+    <div class="tm-labor-hours-field">
  <label>Labor Hours</label>
- <div class="tm-hours-readout">
-  <span class="tm-hours-icon">◷</span>
-  <input id="timeSpent" type="number" min="0" step=".01" required readonly>
-  <span class="tm-hours-unit">HRS</span>
- </div>
-
+ <input id="timeSpent" type="number" min="0" step=".01" required readonly>
 </div>
    </div>
 
@@ -1828,7 +1857,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-NO-MINUTES-V7</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-STANDARD-FIELD-V8</div>
 </body></html>`);
  w.document.close();
 }
