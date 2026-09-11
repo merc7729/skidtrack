@@ -756,6 +756,25 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
  padding:10px 12px!important;
 }
 </style>
+<style id="tm-hours-exact-standard-font">
+.tm-labor-hours-field>label{
+ font:inherit!important;
+ font-family:inherit!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+ color:inherit!important;
+ letter-spacing:normal!important;
+}
+.tm-labor-hours-field #timeSpent{
+ font:inherit!important;
+ font-family:inherit!important;
+ font-size:inherit!important;
+ font-weight:400!important;
+ color:#102f5c!important;
+ letter-spacing:normal!important;
+ text-align:left!important;
+}
+</style>
 </head>
 <body>
 
@@ -1874,7 +1893,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-TIMER-FONT-FIX-V9</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-TIMER-REBUILT-V10</div>
 </body></html>`);
  w.document.close();
 }
@@ -2832,6 +2851,7 @@ async function saveSkidEdit(id){
 function startWork(){
  if(activeStartTime)return;
 
+ if(timerInterval)clearInterval(timerInterval);
  activeStartTime=new Date();
  pauseStartedAt=null;
  totalPausedMs=0;
@@ -2840,37 +2860,34 @@ function startWork(){
  localStorage.setItem("skidtrack_total_paused_ms","0");
  localStorage.removeItem("skidtrack_pause_started_at");
 
- $("startWorkBtn").disabled=true;
- $("pauseWorkBtn").disabled=false;
- $("pauseWorkBtn").textContent="⏸ Pause";
- $("stopWorkBtn").disabled=false;
- $("timerStatus").textContent="Work timer running...";
+ if($("startWorkBtn"))$("startWorkBtn").disabled=true;
+ if($("pauseWorkBtn")){
+  $("pauseWorkBtn").disabled=false;
+  $("pauseWorkBtn").textContent="⏸ Pause";
+ }
+ if($("stopWorkBtn"))$("stopWorkBtn").disabled=false;
+ if($("timerStatus"))$("timerStatus").textContent="Work timer running...";
 
  updateTimer();
- timerInterval=setInterval(updateTimer,1000);
+ timerInterval=window.setInterval(updateTimer,1000);
 }
 
 function updateTimer(){
  if(!activeStartTime)return;
 
  const now=pauseStartedAt ? pauseStartedAt.getTime() : Date.now();
- const elapsed=Math.max(
-  0,
-  now-activeStartTime.getTime()-totalPausedMs
- );
-
+ const elapsed=Math.max(0,now-activeStartTime.getTime()-totalPausedMs);
  const seconds=Math.floor(elapsed/1000);
- const minutes=Math.floor(seconds/60);
  const hours=elapsed/3600000;
 
- $("timerDisplay").textContent=
-  `${String(Math.floor(seconds/3600)).padStart(2,"0")}:`+
-  `${String(Math.floor((seconds%3600)/60)).padStart(2,"0")}:`+
-  `${String(seconds%60).padStart(2,"0")}`;
-
- $("timeSpent").value=hours.toFixed(2);
+ if($("timerDisplay")){
+  $("timerDisplay").textContent=
+   `${String(Math.floor(seconds/3600)).padStart(2,"0")}:`+
+   `${String(Math.floor((seconds%3600)/60)).padStart(2,"0")}:`+
+   `${String(seconds%60).padStart(2,"0")}`;
+ }
+ if($("timeSpent"))$("timeSpent").value=hours.toFixed(2);
  updateTmSummary();
- if($("minutesDisplay"))$("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
 }
 
 
@@ -2917,7 +2934,6 @@ function clearTimer(){
  localStorage.removeItem("skidtrack_pause_started_at");
 
  if($("timerDisplay"))$("timerDisplay").textContent="00:00:00";
- if($("minutesDisplay"))$("minutesDisplay").textContent="0 minutes";
  if($("timerStatus"))$("timerStatus").textContent="No active work session.";
  if($("startWorkBtn"))$("startWorkBtn").disabled=false;
  if($("pauseWorkBtn")){
@@ -2951,7 +2967,6 @@ async function stopWork(){
 
  $("timeSpent").value=hours.toFixed(2);
  updateTmSummary();
- if($("minutesDisplay"))$("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
  $("timerStatus").textContent="Work stopped. Review the record, then click Save Work Record.";
 
  // Preserve start/stop timestamps for the manual Save Work Record button.
