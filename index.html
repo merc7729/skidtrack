@@ -630,6 +630,20 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 .st-brand.original-brand{display:flex!important;align-items:center!important;height:70px!important}
 .st-brand.original-brand .skidtracker-brand-logo{display:block!important;width:auto!important;height:68px!important;max-width:220px!important;object-fit:contain!important}
 </style>
+<style id="same-logo-everywhere">
+/* Use the exact login-screen SkidTracker artwork everywhere the app displays branding. */
+.st-header .st-brand.original-brand .skidtracker-brand-logo{
+ display:block!important;
+ width:auto!important;
+ height:68px!important;
+ max-width:235px!important;
+ object-fit:contain!important;
+}
+.st-header .st-wordmark,.st-header .new-wordmark,.st-header .new-metal-brand,.st-header .st-drop{display:none!important}
+@media(max-width:900px){
+ .st-header .st-brand.original-brand .skidtracker-brand-logo{height:56px!important;max-width:190px!important}
+}
+</style>
 </head>
 <body>
 
@@ -1745,7 +1759,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">NEW-WHITE-CONTROL-ROOM-V3</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">SAME-LOGIN-LOGO-V4</div>
 </body></html>`);
  w.document.close();
 }
