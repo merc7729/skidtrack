@@ -657,6 +657,26 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 /* Labor Hours label uses the exact same header styling as all T&M labels. */
 #timeSpent{ }
 </style>
+<style id="tm-embedded-work-history">
+.tm-history-divider{
+ height:1px;
+ background:#dbe8f4;
+ margin:26px 0 22px;
+}
+.tm-history-embedded{
+ margin-top:0;
+ scroll-margin-top:110px;
+}
+.tm-history-embedded>.top{
+ margin-bottom:12px;
+}
+.tm-history-embedded .card{
+ margin-bottom:6px;
+}
+@media(max-width:900px){
+ .tm-history-embedded{scroll-margin-top:20px}
+}
+</style>
 </head>
 <body>
 
@@ -702,7 +722,6 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
  <button id="nav-work" onclick="showPage('work')">⏱ <span>Time &amp; Materials</span></button>
  <button id="nav-skids" onclick="showPage('skids')">◇ <span>Skids</span></button>
  <button id="nav-inventory" class="admin-only hidden" onclick="showPage('inventory')">▣ <span>Inventory</span></button>
- <button id="nav-history" onclick="showPage('history')">◷ <span>Work History</span></button>
  <button id="nav-employees" class="admin-only hidden" onclick="showPage('employees')">♙ <span>Employees</span></button>
  <button id="nav-reports" class="admin-only hidden" onclick="showPage('reports')">▥ <span>Reports</span></button>
 </nav>
@@ -727,7 +746,7 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 
  <div class="st-dashboard-grid">
   <div class="st-panel st-wide">
-   <div class="st-panel-title"><div><h3>Recent Service Activity</h3><span class="muted">Latest labor and service records</span></div><button class="secondary small" onclick="showPage('history')">View All</button></div>
+   <div class="st-panel-title"><div><h3>Recent Service Activity</h3><span class="muted">Latest labor and service records</span></div><button class="secondary small" onclick="openWorkHistory()">View All</button></div>
    <div class="table-wrap st-table"><table>
     <thead><tr><th>Date</th><th>Skid</th><th>WT / Description</th><th>Hours</th><th>Employee</th></tr></thead>
     <tbody id="recentActivity"></tbody>
@@ -864,6 +883,20 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
   </form>
   <div id="workMessage" class="status"></div>
  </div>
+
+
+ <div class="tm-history-divider"></div>
+ <div id="workHistoryEmbedded" class="tm-history-embedded">
+ <div class="top">
+  <div><h2 style="margin:0">Work History</h2><span class="muted">Time, materials, and service records.</span></div>
+  <button type="button" class="secondary" onclick="refreshAllData()">Refresh</button>
+ </div>
+ <div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br>
+ <div class="table-wrap"><table><thead><tr>
+<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Materials</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
+<th class="history-admin-col">Notes</th><th class="history-admin-col">Actions</th>
+</tr></thead><tbody id="historyTable"></tbody></table></div></div>
+</div>
 </section>
 
 <section id="skids" class="page">
@@ -890,15 +923,6 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
   <div class="row"><input id="skidSearch" placeholder="Search skids..." oninput="renderSkids()"><select id="skidStatusFilter" onchange="renderSkids()"><option value="">All Statuses</option><option value="active">Active</option><option value="complete">Complete</option></select></div><br>
   <div class="table-wrap"><table><thead><tr><th>Skid</th><th>Status</th><th>Actions</th></tr></thead><tbody id="skidTable"></tbody></table></div>
  </div>
-</section>
-
-<section id="history" class="page">
- <div class="top"><h2>Work History</h2><button class="secondary" onclick="refreshAllData()">Refresh</button></div>
- <div class="card"><input id="historySearch" placeholder="Search work history..." oninput="renderHistory()"><br><br>
- <div class="table-wrap"><table><thead><tr>
-<th>Employee</th><th>Date</th><th>Skid</th><th>WT/Description</th><th>Hours</th><th>Materials</th><th class="history-admin-col">Start</th><th class="history-admin-col">Stop</th>
-<th class="history-admin-col">Notes</th><th class="history-admin-col">Actions</th>
-</tr></thead><tbody id="historyTable"></tbody></table></div></div>
 </section>
 
 
@@ -1544,9 +1568,7 @@ function applyRoleVisibility(){
 
  // Everyone can use Log Work and Work History.
  const workNav=$("nav-work");
- const historyNav=$("nav-history");
  if(workNav)workNav.classList.remove("hidden");
- if(historyNav)historyNav.classList.remove("hidden");
 
  // Non-admin employees land directly on Log Work.
  if(!isAdmin){
@@ -1557,8 +1579,16 @@ function applyRoleVisibility(){
  }
 }
 
+function openWorkHistory(){
+ showPage("work");
+ requestAnimationFrame(()=>{
+  const target=$("workHistoryEmbedded");
+  if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+ });
+}
+
 function showPage(id){
- if(!admin() && !["work","history"].includes(id)){
+ if(!admin() && id!=="work"){
   id="work";
  }
 
@@ -1775,7 +1805,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-HEADER-MATCH-V12</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HISTORY-EMBEDDED-V13</div>
 </body></html>`);
  w.document.close();
 }
