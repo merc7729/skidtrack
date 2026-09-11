@@ -644,6 +644,59 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
  .st-header .st-brand.original-brand .skidtracker-brand-logo{height:56px!important;max-width:190px!important}
 }
 </style>
+<style id="tm-labor-hours-inside-box">
+.tm-labor-hours-box{
+ background:linear-gradient(180deg,#fafdff,#eef7ff)!important;
+ border:1px solid #bcdcff!important;
+ border-radius:12px!important;
+ padding:11px 13px!important;
+ box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(18,100,180,.08)!important;
+}
+.tm-labor-hours-box>label{
+ display:block!important;
+ margin:0 0 6px!important;
+ color:#315a87!important;
+ font-size:12px!important;
+ font-weight:800!important;
+}
+.tm-hours-readout{
+ display:flex!important;
+ align-items:center!important;
+ gap:8px!important;
+}
+.tm-hours-icon{
+ width:30px;height:30px;border-radius:8px;
+ display:grid;place-items:center;
+ background:#e1f1ff;color:#0879e8;
+ font-size:17px;font-weight:900;
+}
+.tm-hours-readout #timeSpent{
+ flex:1!important;
+ min-width:0!important;
+ height:42px!important;
+ margin:0!important;
+ padding:0 6px!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ color:#0879e8!important;
+ font-size:27px!important;
+ font-weight:900!important;
+ text-align:right!important;
+}
+.tm-hours-unit{
+ color:#597899!important;
+ font-size:11px!important;
+ font-weight:900!important;
+ letter-spacing:.5px!important;
+}
+.tm-minutes{
+ margin-top:3px!important;
+ padding-right:34px!important;
+ text-align:right!important;
+ font-size:11px!important;
+}
+</style>
 </head>
 <body>
 
@@ -794,7 +847,15 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
       <option value="travel">Travel</option>
      </select>
     </div>
-    <div><label>Labor Hours</label><input id="timeSpent" type="number" min="0" step=".01" required readonly><div class="muted" id="minutesDisplay">0 minutes</div></div>
+    <div class="tm-labor-hours-box">
+ <label>Labor Hours</label>
+ <div class="tm-hours-readout">
+  <span class="tm-hours-icon">◷</span>
+  <input id="timeSpent" type="number" min="0" step=".01" required readonly>
+  <span class="tm-hours-unit">HRS</span>
+ </div>
+ <div class="muted tm-minutes" id="minutesDisplay">0 minutes</div>
+</div>
    </div>
 
    <div class="row">
@@ -1759,7 +1820,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">SAME-LOGIN-LOGO-V4</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-LABOR-HOURS-BOX-V5</div>
 </body></html>`);
  w.document.close();
 }
