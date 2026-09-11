@@ -644,137 +644,12 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
  .st-header .st-brand.original-brand .skidtracker-brand-logo{height:56px!important;max-width:190px!important}
 }
 </style>
-<style id="tm-labor-hours-inside-box">
-.tm-labor-hours-box{
- background:linear-gradient(180deg,#fafdff,#eef7ff)!important;
- border:1px solid #bcdcff!important;
- border-radius:12px!important;
- padding:11px 13px!important;
- box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(18,100,180,.08)!important;
-}
-.tm-labor-hours-box>label{
- display:block!important;
- margin:0 0 6px!important;
- color:#315a87!important;
- font-size:12px!important;
- font-weight:800!important;
-}
-.tm-hours-readout{
- display:flex!important;
- align-items:center!important;
- gap:8px!important;
-}
-.tm-hours-icon{
- width:30px;height:30px;border-radius:8px;
- display:grid;place-items:center;
- background:#e1f1ff;color:#0879e8;
- font-size:17px;font-weight:900;
-}
-.tm-hours-readout #timeSpent{
- flex:1!important;
- min-width:0!important;
- height:42px!important;
- margin:0!important;
- padding:0 6px!important;
- border:0!important;
- background:transparent!important;
- box-shadow:none!important;
- color:#0879e8!important;
- font-size:27px!important;
- font-weight:900!important;
- text-align:right!important;
-}
-.tm-hours-unit{
- color:#597899!important;
- font-size:11px!important;
- font-weight:900!important;
- letter-spacing:.5px!important;
-}
-.tm-minutes{
- margin-top:3px!important;
- padding-right:34px!important;
- text-align:right!important;
- font-size:11px!important;
-}
-</style>
-<style id="tm-hours-no-minutes">
-.tm-labor-hours-box .tm-minutes{display:none!important}
-</style>
-<style id="tm-hours-final-cleanup">
-.tm-labor-hours-box #minutesDisplay,
-.tm-labor-hours-box .tm-minutes{display:none!important}
-.tm-labor-hours-box{padding-bottom:13px!important}
-</style>
-<style id="tm-hours-match-other-fields">
-.tm-labor-hours-field{
- background:transparent!important;
- border:0!important;
- padding:0!important;
- box-shadow:none!important;
-}
-.tm-labor-hours-field>label{
- display:block!important;
- margin:0 0 6px!important;
- color:inherit!important;
- font-size:inherit!important;
- font-weight:inherit!important;
-}
-.tm-labor-hours-field #timeSpent{
- width:100%!important;
- height:auto!important;
- min-height:0!important;
- margin:0!important;
- padding:10px 12px!important;
- background:#fff!important;
- color:#102f5c!important;
- border:1px solid #cbdff2!important;
- border-radius:9px!important;
- box-shadow:none!important;
- font-size:inherit!important;
- font-weight:inherit!important;
- text-align:left!important;
-}
-.tm-labor-hours-field #timeSpent:focus{
- border-color:#158cf5!important;
- box-shadow:0 0 0 3px rgba(21,140,245,.12)!important;
-}
-</style>
-<style id="tm-hours-font-match-final">
-.tm-labor-hours-field>label{
- font-family:inherit!important;
- font-size:inherit!important;
- font-weight:inherit!important;
- letter-spacing:normal!important;
- color:inherit!important;
-}
-.tm-labor-hours-field #timeSpent{
- font-family:inherit!important;
- font-size:inherit!important;
- font-weight:400!important;
- letter-spacing:normal!important;
- height:auto!important;
- padding:10px 12px!important;
-}
-</style>
-<style id="tm-hours-exact-standard-font">
-.tm-labor-hours-field>label{
- font:inherit!important;
- font-family:inherit!important;
- font-size:inherit!important;
- font-weight:inherit!important;
- color:inherit!important;
- letter-spacing:normal!important;
-}
-.tm-labor-hours-field #timeSpent{
- font:inherit!important;
- font-family:inherit!important;
- font-size:inherit!important;
- font-weight:400!important;
- color:#102f5c!important;
- letter-spacing:normal!important;
- text-align:left!important;
-}
-</style>
+
+
+
+
+
+
 </head>
 <body>
 
@@ -925,7 +800,7 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
       <option value="travel">Travel</option>
      </select>
     </div>
-    <div class="tm-labor-hours-field">
+    <div>
  <label>Labor Hours</label>
  <input id="timeSpent" type="number" min="0" step=".01" required readonly>
 </div>
@@ -1893,7 +1768,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-TIMER-REBUILT-V10</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-EXACT-MATCH-V11</div>
 </body></html>`);
  w.document.close();
 }
