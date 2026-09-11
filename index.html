@@ -650,6 +650,13 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
 
 
 
+<style id="labor-hours-header-exact-match">
+#timeSpent + * { }
+#timeSpent{font:inherit!important;}
+#timeSpent[type="number"]{font:inherit!important;}
+/* Labor Hours label uses the exact same header styling as all T&M labels. */
+#timeSpent{ }
+</style>
 </head>
 <body>
 
@@ -1768,7 +1775,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-EXACT-MATCH-V11</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-HEADER-MATCH-V12</div>
 </body></html>`);
  w.document.close();
 }
