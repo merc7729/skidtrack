@@ -739,6 +739,23 @@ button[id*="stop" i]{background:#64748b!important;color:#fff!important}
  box-shadow:0 0 0 3px rgba(21,140,245,.12)!important;
 }
 </style>
+<style id="tm-hours-font-match-final">
+.tm-labor-hours-field>label{
+ font-family:inherit!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+ letter-spacing:normal!important;
+ color:inherit!important;
+}
+.tm-labor-hours-field #timeSpent{
+ font-family:inherit!important;
+ font-size:inherit!important;
+ font-weight:400!important;
+ letter-spacing:normal!important;
+ height:auto!important;
+ padding:10px 12px!important;
+}
+</style>
 </head>
 <body>
 
@@ -1857,7 +1874,7 @@ function printInventoryQr(itemId){
  </style></head><body>
  <div class="label"><div id="q"></div><div class="txt"><div class="part">${part}</div><div class="name">${name}</div></div></div>
  <script>window.onload=function(){new QRCode(document.getElementById("q"),{text:${qrText},width:75,height:75,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print()},500)}<\/script>
- <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-HOURS-STANDARD-FIELD-V8</div>
+ <div id="themeBuildMarker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:10px Arial;color:#4f6f91;opacity:.65">TM-TIMER-FONT-FIX-V9</div>
 </body></html>`);
  w.document.close();
 }
@@ -2852,7 +2869,8 @@ function updateTimer(){
   `${String(seconds%60).padStart(2,"0")}`;
 
  $("timeSpent").value=hours.toFixed(2);
- $("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
+ updateTmSummary();
+ if($("minutesDisplay"))$("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
 }
 
 
@@ -2932,7 +2950,8 @@ async function stopWork(){
  timerInterval=null;
 
  $("timeSpent").value=hours.toFixed(2);
- $("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
+ updateTmSummary();
+ if($("minutesDisplay"))$("minutesDisplay").textContent=`${minutes} minute${minutes===1?"":"s"}`;
  $("timerStatus").textContent="Work stopped. Review the record, then click Save Work Record.";
 
  // Preserve start/stop timestamps for the manual Save Work Record button.
